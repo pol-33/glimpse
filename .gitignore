@@ -1,0 +1,29 @@
+# NetBeans
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# Maven
+target/
+
+# Compiled class files
+*.class
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# GlassFish
+glassfish/domains/domain1/logs/
+
+# Database files (JavaDB / Derby)
+derby.log
+*.lck
+
+# IDE temporary files
+*.swp
+*.swo
