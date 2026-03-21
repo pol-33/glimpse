@@ -1,87 +1,114 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package controller;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
+import model.DBManager;
+import model.Video;
 
-/**
- *
- * @author alumne
- */
 @WebServlet(name = "RegisterVideoServlet", urlPatterns = {"/RegisterVideoServlet"})
 public class RegisterVideoServlet extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet RegisterVideoServlet</title>");            
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet RegisterVideoServlet at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
-        }
-    }
-
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
-
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+
+        // Session check: if not logged in, redirect to login
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("loggedUser") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        // Retrieve form parameters
+        String idStr        = request.getParameter("id");
+        String title        = request.getParameter("title");
+        String author       = request.getParameter("author");
+        String dateStr      = request.getParameter("creationDate");
+        String durationStr  = request.getParameter("duration");
+        String viewsStr     = request.getParameter("views");
+        String description  = request.getParameter("description");
+        String format       = request.getParameter("format");
+        String filePath     = request.getParameter("filePath");
+
+        // Control empty fields
+        if (idStr.isEmpty() || title.isEmpty() || author.isEmpty()
+                || dateStr.isEmpty() || durationStr.isEmpty() || format.isEmpty()) {
+            request.setAttribute("error", "All required fields must be filled in.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
+        // Parse and validate ID
+        int id;
+        try {
+            id = Integer.parseInt(idStr);
+            if (id < 0) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "ID must be a positive integer.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
+        // Parse and validate date
+        LocalDate creationDate;
+        try {
+            creationDate = LocalDate.parse(dateStr);
+        } catch (DateTimeParseException e) {
+            request.setAttribute("error", "Invalid date format.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
+        // Parse and validate duration
+        // HTML time inputs give "HH:mm", LocalTime.parse needs "HH:mm:ss"
+        LocalTime duration;
+        try {
+            if (durationStr.length() == 5) durationStr += ":00";
+            duration = LocalTime.parse(durationStr);
+        } catch (DateTimeParseException e) {
+            request.setAttribute("error", "Invalid duration format.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
+        // Parse and validate views
+        int views;
+        try {
+            views = Integer.parseInt(viewsStr);
+            if (views < 0) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "Views must be a non-negative integer.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
+        DBManager dbManager = new DBManager();
+
+        // Check for duplicate video ID
+        if (dbManager.videoExists(id)) {
+            request.setAttribute("error", "A video with ID " + id + " already exists.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
+        // Build the Video object and save it
+        Video video = new Video(id, title, author, creationDate, duration,
+                                views, description, format, filePath);
+
+        boolean success = dbManager.registerVideo(video);
+        if (success) {
+            response.sendRedirect("ListVideosServlet");
+        } else {
+            request.setAttribute("error", "Database error. Please try again.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+        }
     }
-
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
-
 }
