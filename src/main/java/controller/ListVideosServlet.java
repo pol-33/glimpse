@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import model.DBManager;
 import model.Video;
 
@@ -25,15 +27,17 @@ public class ListVideosServlet extends HttpServlet {
             return;
         }
 
-        // Fetch all videos from DB and pass them to the JSP
+        String loggedUser = (String) session.getAttribute("loggedUser");
         DBManager dbManager = new DBManager();
-        List<Video> videos = dbManager.getAllVideos();
 
-        if (videos == null || videos.isEmpty()) {
-            request.setAttribute("info", "No videos registered yet.");
-        }
+        List<Video> videos          = dbManager.getAllVideos();
+        Map<Integer, Integer> likes = dbManager.getLikeCounts();
+        Set<Integer> likedByUser    = dbManager.getLikedVideoIds(loggedUser);
 
         request.setAttribute("videos", videos);
+        request.setAttribute("likes", likes);
+        request.setAttribute("likedByUser", likedByUser);
+
         request.getRequestDispatcher("listVideos.jsp").forward(request, response);
     }
 }
