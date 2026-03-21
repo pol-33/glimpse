@@ -14,10 +14,10 @@ public class Video {
     private String format;
     private String filePath;
 
-    public Video(int id, String title, String author, LocalDate creationDate,
+    // Used when registering a new video — id is not known yet
+    public Video(String title, String author, LocalDate creationDate,
                  LocalTime duration, int views, String description,
                  String format, String filePath) {
-        this.id = id;
         this.title = title;
         this.author = author;
         this.creationDate = creationDate;
@@ -26,6 +26,14 @@ public class Video {
         this.description = description;
         this.format = format;
         this.filePath = filePath;
+    }
+
+    // Used when reading from DB — id is known
+    public Video(int id, String title, String author, LocalDate creationDate,
+                 LocalTime duration, int views, String description,
+                 String format, String filePath) {
+        this(title, author, creationDate, duration, views, description, format, filePath);
+        this.id = id;
     }
 
     // Getters

@@ -4,10 +4,10 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Video List</title>
 </head>
 <body>
-    <%-- Session check --%>
     <%
         if (session.getAttribute("loggedUser") == null) {
             response.sendRedirect("login.jsp");
@@ -16,7 +16,7 @@
     %>
 
     <h2>Video List</h2>
-    <p>Welcome, <%= session.getAttribute("loggedUser") %>!
+    <p>Welcome, <strong><%= session.getAttribute("loggedUser") %></strong>!
        <a href="logout.jsp">Logout</a> |
        <a href="registerVideo.jsp">Register new video</a>
     </p>
@@ -53,7 +53,13 @@
             <td><%= v.getViews() %></td>
             <td><%= v.getDescription() %></td>
             <td><%= v.getFormat() %></td>
-            <td><%= v.getFilePath() %></td>
+            <td>
+                <% if (v.getFilePath() != null && v.getFilePath().startsWith("http")) { %>
+                    <a href="<%= v.getFilePath() %>" target="_blank">Open link</a>
+                <% } else { %>
+                    <%= v.getFilePath() %>
+                <% } %>
+            </td>
         </tr>
         <%
             }

@@ -19,8 +19,9 @@ public class RegisterVideoServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
 
-        // Session check: if not logged in, redirect to login
+        // Session check
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedUser") == null) {
             response.sendRedirect("login.jsp");
@@ -28,50 +29,27 @@ public class RegisterVideoServlet extends HttpServlet {
         }
 
         // Retrieve form parameters
-        String idStr        = request.getParameter("id");
-        String title        = request.getParameter("title");
-        String author       = request.getParameter("author");
-        String dateStr      = request.getParameter("creationDate");
-        String durationStr  = request.getParameter("duration");
-        String viewsStr     = request.getParameter("views");
-        String description  = request.getParameter("description");
-        String format       = request.getParameter("format");
-        String filePath     = request.getParameter("filePath");
+        String title       = request.getParameter("title");
+        String durationStr = request.getParameter("duration");
+        String description = request.getParameter("description");
+        String format      = request.getParameter("format");
+        String filePath    = request.getParameter("filePath");
+
+        // Auto-set values
+        String author          = (String) session.getAttribute("loggedUser");
+        LocalDate creationDate = LocalDate.now();
+        int views              = 0;
 
         // Control empty fields
-        if (idStr.isEmpty() || title.isEmpty() || author.isEmpty()
-                || dateStr.isEmpty() || durationStr.isEmpty() || format.isEmpty()) {
+        if (title.isEmpty() || durationStr.isEmpty() || format.isEmpty()) {
             request.setAttribute("error", "All required fields must be filled in.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
         }
 
-        // Parse and validate ID
-        int id;
-        try {
-            id = Integer.parseInt(idStr);
-            if (id < 0) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
-            request.setAttribute("error", "ID must be a positive integer.");
-            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
-            return;
-        }
-
-        // Parse and validate date
-        LocalDate creationDate;
-        try {
-            creationDate = LocalDate.parse(dateStr);
-        } catch (DateTimeParseException e) {
-            request.setAttribute("error", "Invalid date format.");
-            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
-            return;
-        }
-
         // Parse and validate duration
-        // HTML time inputs give "HH:mm", LocalTime.parse needs "HH:mm:ss"
         LocalTime duration;
         try {
-            if (durationStr.length() == 5) durationStr += ":00";
             duration = LocalTime.parse(durationStr);
         } catch (DateTimeParseException e) {
             request.setAttribute("error", "Invalid duration format.");
@@ -79,28 +57,17 @@ public class RegisterVideoServlet extends HttpServlet {
             return;
         }
 
-        // Parse and validate views
-        int views;
-        try {
-            views = Integer.parseInt(viewsStr);
-            if (views < 0) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
-            request.setAttribute("error", "Views must be a non-negative integer.");
-            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
-            return;
-        }
-
         DBManager dbManager = new DBManager();
 
-        // Check for duplicate video ID
-        if (dbManager.videoExists(id)) {
-            request.setAttribute("error", "A video with ID " + id + " already exists.");
+        // Check for duplicate title
+        if (dbManager.videoExists(title)) {
+            request.setAttribute("error", "A video with that title already exists.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
         }
 
-        // Build the Video object and save it
-        Video video = new Video(id, title, author, creationDate, duration,
+        // Build Video object and save it
+        Video video = new Video(title, author, creationDate, duration,
                                 views, description, format, filePath);
 
         boolean success = dbManager.registerVideo(video);

@@ -22,6 +22,21 @@ public class DBManager {
     // USER METHODS
     // -------------------------------------------------------------------------
 
+    public boolean userExists(String username) {
+        String query = "SELECT username FROM users WHERE username = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public boolean registerUser(String username, String name, String surname,
                                 String email, String password) {
         String query = "INSERT INTO users (username, name, surname, email, password) "
@@ -64,12 +79,12 @@ public class DBManager {
     // VIDEO METHODS
     // -------------------------------------------------------------------------
 
-    public boolean videoExists(int id) {
-        String query = "SELECT id FROM videos WHERE id = ?";
+    public boolean videoExists(String title) {
+        String query = "SELECT id FROM videos WHERE title = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
 
-            pstmt.setInt(1, id);
+            pstmt.setString(1, title);
             ResultSet rs = pstmt.executeQuery();
             return rs.next();
 
@@ -81,21 +96,20 @@ public class DBManager {
 
     public boolean registerVideo(Video video) {
         String query = "INSERT INTO videos "
-                     + "(id, title, author, creation_date, duration, views, "
+                     + "(title, author, creation_date, duration, views, "
                      + "description, format, file_path) "
-                     + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
 
-            pstmt.setInt(1, video.getId());
-            pstmt.setString(2, video.getTitle());
-            pstmt.setString(3, video.getAuthor());
-            pstmt.setDate(4, java.sql.Date.valueOf(video.getCreationDate()));
-            pstmt.setTime(5, java.sql.Time.valueOf(video.getDuration()));
-            pstmt.setInt(6, video.getViews());
-            pstmt.setString(7, video.getDescription());
-            pstmt.setString(8, video.getFormat());
-            pstmt.setString(9, video.getFilePath());
+            pstmt.setString(1, video.getTitle());
+            pstmt.setString(2, video.getAuthor());
+            pstmt.setDate(3, java.sql.Date.valueOf(video.getCreationDate()));
+            pstmt.setTime(4, java.sql.Time.valueOf(video.getDuration()));
+            pstmt.setInt(5, video.getViews());
+            pstmt.setString(6, video.getDescription());
+            pstmt.setString(7, video.getFormat());
+            pstmt.setString(8, video.getFilePath());
 
             return pstmt.executeUpdate() > 0;
 
