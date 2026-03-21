@@ -29,7 +29,8 @@
                     </div>
                 <% } %>
 
-                <form action="RegisterVideoServlet" method="POST">
+                <form action="RegisterVideoServlet" method="POST"
+                      enctype="multipart/form-data">
 
                     <div class="mb-3">
                         <label class="form-label">Title</label>
@@ -56,10 +57,36 @@
                                   placeholder="What is this video about?"></textarea>
                     </div>
 
+                    <%-- File source — required, no default --%>
                     <div class="mb-4">
-                        <label class="form-label">File path / URL</label>
-                        <input type="text" name="filePath" class="form-control"
-                               placeholder="http://example.com/video.mp4">
+                        <label class="form-label">
+                            Video file <span style="color:var(--glimpse-danger);">*</span>
+                        </label>
+                        <div class="d-flex gap-3 mb-3">
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                <input type="radio" name="fileChoice" value="url"
+                                       onchange="toggleFileChoice('url')" required>
+                                <span style="font-size:0.9rem;">External URL</span>
+                            </label>
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                <input type="radio" name="fileChoice" value="upload"
+                                       onchange="toggleFileChoice('upload')" required>
+                                <span style="font-size:0.9rem;">Upload file</span>
+                            </label>
+                        </div>
+
+                        <div id="section-url" style="display:none;">
+                            <input type="text" name="fileUrl" class="form-control"
+                                   placeholder="https://example.com/video.mp4">
+                        </div>
+
+                        <div id="section-upload" style="display:none;">
+                            <input type="file" name="fileUpload" class="form-control"
+                                   accept="video/*,audio/*">
+                            <small style="color:var(--glimpse-muted); font-size:0.82rem;">
+                                Max 500 MB
+                            </small>
+                        </div>
                     </div>
 
                     <div class="d-flex gap-3">
@@ -75,5 +102,14 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleFileChoice(choice) {
+            document.getElementById('section-url').style.display =
+                choice === 'url' ? 'block' : 'none';
+            document.getElementById('section-upload').style.display =
+                choice === 'upload' ? 'block' : 'none';
+        }
+    </script>
 </body>
 </html>

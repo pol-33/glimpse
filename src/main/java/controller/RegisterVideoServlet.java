@@ -1,20 +1,37 @@
 package controller;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.UUID;
 import model.DBManager;
 import model.Video;
 
 @WebServlet(name = "RegisterVideoServlet", urlPatterns = {"/RegisterVideoServlet"})
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024,
+    maxFileSize       = 1024 * 1024 * 500,
+    maxRequestSize    = 1024 * 1024 * 510
+)
 public class RegisterVideoServlet extends HttpServlet {
+
+    private static final String UPLOAD_DIR =
+        System.getProperty("user.home") + File.separator + "glimpse-uploads";
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -33,9 +50,7 @@ public class RegisterVideoServlet extends HttpServlet {
         String durationStr = request.getParameter("duration");
         String description = request.getParameter("description");
         String format      = request.getParameter("format");
-        String filePathRaw = request.getParameter("filePath");
-        String filePath    = (filePathRaw != null && !filePathRaw.trim().isEmpty()) 
-            ? filePathRaw.trim() : null;
+        String fileChoice  = request.getParameter("fileChoice"); // "url" or "upload" only
 
         // Auto-set values
         String author          = (String) session.getAttribute("loggedUser");
@@ -49,14 +64,61 @@ public class RegisterVideoServlet extends HttpServlet {
             return;
         }
 
+        // Enforce file source is present and valid
+        if (fileChoice == null || !(fileChoice.equals("url") || fileChoice.equals("upload"))) {
+            request.setAttribute("error", "You must provide either a URL or upload a file.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
         // Parse and validate duration
         LocalTime duration;
         try {
+            if (durationStr.length() == 5) durationStr += ":00";
             duration = LocalTime.parse(durationStr);
         } catch (DateTimeParseException e) {
             request.setAttribute("error", "Invalid duration format.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
+        }
+
+        // Resolve file path and original filename
+        String filePath         = null;
+        String originalFilename = null;
+
+        if ("url".equals(fileChoice)) {
+            String rawUrl = request.getParameter("fileUrl");
+            if (rawUrl == null || rawUrl.trim().isEmpty()) {
+                request.setAttribute("error", "Please provide a valid URL.");
+                request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+                return;
+            }
+            filePath = rawUrl.trim();
+
+        } else { // "upload"
+            Part filePart = request.getPart("fileUpload");
+            if (filePart == null || filePart.getSize() == 0) {
+                request.setAttribute("error", "Please select a file to upload.");
+                request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+                return;
+            }
+
+            originalFilename = Paths.get(
+                filePart.getSubmittedFileName()).getFileName().toString();
+            String ext = "";
+            int dot = originalFilename.lastIndexOf('.');
+            if (dot >= 0) ext = originalFilename.substring(dot);
+            String storedName = UUID.randomUUID().toString() + ext;
+
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) uploadDir.mkdirs();
+
+            Path destination = Paths.get(UPLOAD_DIR, storedName);
+            try (InputStream in = filePart.getInputStream()) {
+                Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            filePath = storedName;
         }
 
         DBManager dbManager = new DBManager();
@@ -70,7 +132,8 @@ public class RegisterVideoServlet extends HttpServlet {
 
         // Build Video object and save it
         Video video = new Video(title, author, creationDate, duration,
-                                views, description, format, filePath);
+                                views, description, format,
+                                filePath, originalFilename, fileChoice);
 
         boolean success = dbManager.registerVideo(video);
         if (success) {

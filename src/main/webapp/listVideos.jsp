@@ -93,14 +93,14 @@
                             <%= v.getDescription() != null ? v.getDescription() : "" %>
                         </td>
                         <td>
-                            <% if (v.getFilePath() != null && v.getFilePath().startsWith("http")) { %>
+                            <% if ("url".equals(v.getFileSource())) { %>
                                 <a href="<%= v.getFilePath() %>" target="_blank"
                                    style="color:var(--glimpse-accent); font-size:0.88rem; font-weight:600;">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i>Open
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Open link
                                 </a>
                             <% } else { %>
                                 <span style="color:var(--glimpse-muted); font-size:0.85rem;">
-                                    <%= v.getFilePath() != null ? v.getFilePath() : "-" %>
+                                    <i class="bi bi-file-earmark-play me-1"></i><%= v.getOriginalFilename() %>
                                 </span>
                             <% } %>
                         </td>

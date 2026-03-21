@@ -97,8 +97,8 @@ public class DBManager {
     public boolean registerVideo(Video video) {
         String query = "INSERT INTO videos "
                      + "(title, author, creation_date, duration, views, "
-                     + "description, format, file_path) "
-                     + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                     + "description, format, file_path, original_filename, file_source) "
+                     + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
 
@@ -110,6 +110,8 @@ public class DBManager {
             pstmt.setString(6, video.getDescription());
             pstmt.setString(7, video.getFormat());
             pstmt.setString(8, video.getFilePath());
+            pstmt.setString(9, video.getOriginalFilename());
+            pstmt.setString(10, video.getFileSource());
 
             return pstmt.executeUpdate() > 0;
 
@@ -139,7 +141,9 @@ public class DBManager {
                     rs.getInt("views"),
                     rs.getString("description"),
                     rs.getString("format"),
-                    rs.getString("file_path")
+                    rs.getString("file_path"),
+                    rs.getString("original_filename"),
+                    rs.getString("file_source")
                 );
                 videos.add(video);
             }
@@ -149,13 +153,13 @@ public class DBManager {
         }
         return videos;
     }
-    
+
     public boolean deleteVideo(int id, String author) {
         // The author check in the WHERE clause ensures users can only
         // delete their own videos, even if they craft a direct request
         String query = "DELETE FROM videos WHERE id = ? AND author = ?";
         try (Connection conn = getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(query)) {
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
 
             pstmt.setInt(1, id);
             pstmt.setString(2, author);
@@ -167,7 +171,7 @@ public class DBManager {
             return false;
         }
     }
-    
+
     // -------------------------------------------------------------------------
     // LIKE METHODS
     // -------------------------------------------------------------------------
