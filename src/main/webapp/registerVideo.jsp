@@ -3,7 +3,8 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Register Video</title>
+    <title>Glimpse — New Video</title>
+    <%@include file="navbar.jsp"%>
 </head>
 <body>
     <%
@@ -13,35 +14,66 @@
         }
     %>
 
-    <h2>Register Video</h2>
-    <p>Publishing as: <strong><%= session.getAttribute("loggedUser") %></strong></p>
+    <div class="container py-5">
+        <div style="max-width: 620px; margin: 0 auto;">
 
-    <% if (request.getAttribute("error") != null) { %>
-        <p style="color:red;"><%= request.getAttribute("error") %></p>
-    <% } %>
+            <h1 class="page-title">New Video</h1>
+            <p class="page-subtitle">
+                Publishing as <strong><%= session.getAttribute("loggedUser") %></strong>
+            </p>
 
-    <form action="RegisterVideoServlet" method="POST">
+            <div class="glimpse-card">
+                <% if (request.getAttribute("error") != null) { %>
+                    <div class="alert-glimpse-error mb-4">
+                        <i class="bi bi-exclamation-circle me-2"></i><%= request.getAttribute("error") %>
+                    </div>
+                <% } %>
 
-        <label>Title:</label>
-        <input type="text" name="title" required><br><br>
+                <form action="RegisterVideoServlet" method="POST">
 
-        <label>Duration (HH:mm:ss):</label>
-        <input type="time" name="duration" step="1" required><br><br>
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" class="form-control"
+                               placeholder="My awesome video" required>
+                    </div>
 
-        <label>Description:</label>
-        <input type="text" name="description"><br><br>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Duration</label>
+                            <input type="time" name="duration" class="form-control"
+                                   step="1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Format</label>
+                            <input type="text" name="format" class="form-control"
+                                   placeholder="mp4, ogg…" required>
+                        </div>
+                    </div>
 
-        <label>Format:</label>
-        <input type="text" name="format" required
-               placeholder="e.g. mp4, ogg"><br><br>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="3"
+                                  placeholder="What is this video about?"></textarea>
+                    </div>
 
-        <label>File path / URL:</label>
-        <input type="text" name="filePath"
-               placeholder="e.g. http://example.com/video.mp4"><br><br>
+                    <div class="mb-4">
+                        <label class="form-label">File path / URL</label>
+                        <input type="text" name="filePath" class="form-control"
+                               placeholder="http://example.com/video.mp4">
+                    </div>
 
-        <input type="submit" value="Register Video">
-    </form>
-
-    <p><a href="ListVideosServlet">Back to video list</a></p>
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn-glimpse">
+                            <i class="bi bi-upload me-2"></i>Publish Video
+                        </button>
+                        <a href="ListVideosServlet" class="btn-glimpse-outline"
+                           style="padding: 0.7rem 1.5rem; line-height:1.5;">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

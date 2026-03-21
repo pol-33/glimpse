@@ -33,7 +33,9 @@ public class RegisterVideoServlet extends HttpServlet {
         String durationStr = request.getParameter("duration");
         String description = request.getParameter("description");
         String format      = request.getParameter("format");
-        String filePath    = request.getParameter("filePath");
+        String filePathRaw = request.getParameter("filePath");
+        String filePath    = (filePathRaw != null && !filePathRaw.trim().isEmpty()) 
+            ? filePathRaw.trim() : null;
 
         // Auto-set values
         String author          = (String) session.getAttribute("loggedUser");
