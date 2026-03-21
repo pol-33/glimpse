@@ -16,7 +16,7 @@ public class Video {
     private String originalFilename;
     private String fileSource;
 
-    // Used when registering a new video — id is not known yet
+    // Used when registering a new video (id is not known yet)
     public Video(String title, String author, LocalDate creationDate,
                  LocalTime duration, int views, String description,
                  String format, String filePath, String originalFilename,
@@ -33,7 +33,7 @@ public class Video {
         this.fileSource       = fileSource;
     }
 
-    // Used when reading from DB — id is known
+    // Used when reading from DB (id is known)
     public Video(int id, String title, String author, LocalDate creationDate,
                  LocalTime duration, int views, String description,
                  String format, String filePath, String originalFilename,

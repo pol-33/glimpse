@@ -57,15 +57,16 @@ public class RegisterVideoServlet extends HttpServlet {
         LocalDate creationDate = LocalDate.now();
         int views              = 0;
 
-        // Control empty fields
-        if (title.isEmpty() || durationStr.isEmpty() || format.isEmpty()) {
+        // Control empty fields, format is excluded here for uploads
+        // because the server derives it from the filename
+        if (title.isEmpty() || durationStr.isEmpty()) {
             request.setAttribute("error", "All required fields must be filled in.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
         }
 
         // Enforce file source is present and valid
-        if (fileChoice == null || !(fileChoice.equals("url") || fileChoice.equals("upload"))) {
+        if (fileChoice == null || (!fileChoice.equals("url") && !fileChoice.equals("upload"))) {
             request.setAttribute("error", "You must provide either a URL or upload a file.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
@@ -82,7 +83,14 @@ public class RegisterVideoServlet extends HttpServlet {
             return;
         }
 
-        // Resolve file path and original filename
+        // Reject 00:00:00 (a video with zero duration is invalid)
+        if (duration.equals(LocalTime.MIDNIGHT)) {
+            request.setAttribute("error", "Duration cannot be 00:00:00.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+            return;
+        }
+
+        // Resolve file path, original filename, and format
         String filePath         = null;
         String originalFilename = null;
 
@@ -95,6 +103,14 @@ public class RegisterVideoServlet extends HttpServlet {
             }
             filePath = rawUrl.trim();
 
+            // For URLs, format comes from the form, validate it is not empty
+            if (format == null || format.trim().isEmpty()) {
+                request.setAttribute("error", "Please specify the video format.");
+                request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+                return;
+            }
+            format = format.trim().toLowerCase();
+
         } else { // "upload"
             Part filePart = request.getPart("fileUpload");
             if (filePart == null || filePart.getSize() == 0) {
@@ -105,10 +121,19 @@ public class RegisterVideoServlet extends HttpServlet {
 
             originalFilename = Paths.get(
                 filePart.getSubmittedFileName()).getFileName().toString();
-            String ext = "";
-            int dot = originalFilename.lastIndexOf('.');
-            if (dot >= 0) ext = originalFilename.substring(dot);
-            String storedName = UUID.randomUUID().toString() + ext;
+
+            // Derive and validate format server-side, never trust the client-submitted value
+            String ext = extractExtension(originalFilename);
+            if (ext == null) {
+                request.setAttribute("error",
+                    "Could not determine format. " +
+                    "Please rename your file with a valid extension (e.g. video.mp4).");
+                request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+                return;
+            }
+            format = ext;
+
+            String storedName = UUID.randomUUID().toString() + "." + ext;
 
             File uploadDir = new File(UPLOAD_DIR);
             if (!uploadDir.exists()) uploadDir.mkdirs();
@@ -142,5 +167,27 @@ public class RegisterVideoServlet extends HttpServlet {
             request.setAttribute("error", "Database error. Please try again.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
         }
+    }
+
+    /**
+     * Extracts and validates the file extension from a filename.
+     * Returns the lowercase extension (without the dot) if valid,
+     * or null if the extension is missing, empty, or contains
+     * non-alphanumeric characters.
+     *
+     * Examples:
+     *   "video.mp4"       → "mp4"
+     *   "hola.video.mp4"  → "mp4"
+     *   "video."          → null  (empty extension)
+     *   "video"           → null  (no dot)
+     *   "video.mp 4"      → null  (space in extension)
+     */
+    private String extractExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0) return null;                    // no dot at all
+        String ext = filename.substring(dot + 1).toLowerCase();
+        if (ext.isEmpty()) return null;              // trailing dot, e.g. "video."
+        if (!ext.matches("[a-z0-9]+")) return null;  // only allow alphanumeric extensions
+        return ext;
     }
 }

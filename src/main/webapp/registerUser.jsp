@@ -3,7 +3,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Glimpse — Register</title>
+    <title>Glimpse - Register</title>
     <%@include file="navbar.jsp"%>
 </head>
 <body>
