@@ -28,9 +28,12 @@ public class UserServlet extends HttpServlet {
             String password        = request.getParameter("password");
             String confirmPassword = request.getParameter("confirmPassword");
 
-            // Control empty fields
-            if (name.isEmpty() || surname.isEmpty() || email.isEmpty()
-                    || username.isEmpty() || password.isEmpty()) {
+            // Null-safe empty field check
+            if (name == null || name.trim().isEmpty()
+                    || surname == null || surname.trim().isEmpty()
+                    || email == null || email.trim().isEmpty()
+                    || username == null || username.trim().isEmpty()
+                    || password == null || password.trim().isEmpty()) {
                 request.setAttribute("error", "All fields must be filled in.");
                 request.getRequestDispatcher("registerUser.jsp").forward(request, response);
                 return;
@@ -50,7 +53,8 @@ public class UserServlet extends HttpServlet {
                 return;
             }
 
-            boolean success = dbManager.registerUser(username, name, surname, email, password);
+            boolean success = dbManager.registerUser(
+                username.trim(), name.trim(), surname.trim(), email.trim(), password);
             if (success) {
                 request.setAttribute("info", "Registration successful! Please login.");
                 request.getRequestDispatcher("login.jsp").forward(request, response);
@@ -63,17 +67,18 @@ public class UserServlet extends HttpServlet {
             String username = request.getParameter("username");
             String password = request.getParameter("password");
 
-            // Control empty fields
-            if (username.isEmpty() || password.isEmpty()) {
+            // Null-safe empty field check
+            if (username == null || username.trim().isEmpty()
+                    || password == null || password.trim().isEmpty()) {
                 request.setAttribute("error", "Username and password must be filled in.");
                 request.getRequestDispatcher("login.jsp").forward(request, response);
                 return;
             }
 
-            boolean isValid = dbManager.validateLogin(username, password);
+            boolean isValid = dbManager.validateLogin(username.trim(), password);
             if (isValid) {
                 HttpSession session = request.getSession();
-                session.setAttribute("loggedUser", username);
+                session.setAttribute("loggedUser", username.trim());
                 response.sendRedirect("ListVideosServlet");
             } else {
                 request.setAttribute("error", "Invalid username or password.");

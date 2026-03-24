@@ -25,13 +25,15 @@ public class LikeVideoServlet extends HttpServlet {
         }
 
         String loggedUser = (String) session.getAttribute("loggedUser");
+        String page       = request.getParameter("page");
+        String redirect   = "ListVideosServlet?page=" + (page != null ? page : "0");
 
         // Parse video ID
         int videoId;
         try {
             videoId = Integer.parseInt(request.getParameter("id"));
         } catch (NumberFormatException e) {
-            response.sendRedirect("ListVideosServlet");
+            response.sendRedirect(redirect);
             return;
         }
 
@@ -44,6 +46,6 @@ public class LikeVideoServlet extends HttpServlet {
             dbManager.likeVideo(videoId, loggedUser);
         }
 
-        response.sendRedirect("ListVideosServlet");
+        response.sendRedirect(redirect);
     }
 }

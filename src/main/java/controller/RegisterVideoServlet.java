@@ -57,16 +57,18 @@ public class RegisterVideoServlet extends HttpServlet {
         LocalDate creationDate = LocalDate.now();
         int views              = 0;
 
-        // Control empty fields, format is excluded here for uploads
+        // Null-safe empty field check — format excluded for uploads
         // because the server derives it from the filename
-        if (title.isEmpty() || durationStr.isEmpty()) {
+        if (title == null || title.trim().isEmpty()
+                || durationStr == null || durationStr.trim().isEmpty()) {
             request.setAttribute("error", "All required fields must be filled in.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
         }
 
         // Enforce file source is present and valid
-        if (fileChoice == null || (!fileChoice.equals("url") && !fileChoice.equals("upload"))) {
+        if (fileChoice == null
+                || (!fileChoice.equals("url") && !fileChoice.equals("upload"))) {
             request.setAttribute("error", "You must provide either a URL or upload a file.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
@@ -149,14 +151,13 @@ public class RegisterVideoServlet extends HttpServlet {
         DBManager dbManager = new DBManager();
 
         // Check for duplicate title
-        if (dbManager.videoExists(title)) {
+        if (dbManager.videoExists(title.trim())) {
             request.setAttribute("error", "A video with that title already exists.");
             request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
         }
 
-        // Build Video object and save it
-        Video video = new Video(title, author, creationDate, duration,
+        Video video = new Video(title.trim(), author, creationDate, duration,
                                 views, description, format,
                                 filePath, originalFilename, fileChoice);
 

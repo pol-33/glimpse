@@ -25,6 +25,8 @@ public class DeleteVideoServlet extends HttpServlet {
         }
 
         String loggedUser = (String) session.getAttribute("loggedUser");
+        String page       = request.getParameter("page");
+        String redirect   = "ListVideosServlet?page=" + (page != null ? page : "0");
 
         // Parse and validate video ID
         String idStr = request.getParameter("id");
@@ -32,7 +34,7 @@ public class DeleteVideoServlet extends HttpServlet {
         try {
             id = Integer.parseInt(idStr);
         } catch (NumberFormatException e) {
-            response.sendRedirect("ListVideosServlet");
+            response.sendRedirect(redirect);
             return;
         }
 
@@ -43,11 +45,9 @@ public class DeleteVideoServlet extends HttpServlet {
         boolean success = dbManager.deleteVideo(id, loggedUser);
         if (!success) {
             // Either the video doesn't exist or it belongs to someone else
-            request.setAttribute("error", "You can only delete your own videos.");
-            request.getRequestDispatcher("ListVideosServlet").forward(request, response);
-            return;
+            session.setAttribute("error", "You can only delete your own videos.");
         }
 
-        response.sendRedirect("ListVideosServlet");
+        response.sendRedirect(redirect);
     }
 }
