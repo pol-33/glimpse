@@ -121,11 +121,55 @@ public class DBManager {
         }
     }
 
-    public List<Video> getAllVideos() {
-        List<Video> videos = new ArrayList<>();
-        String query = "SELECT * FROM videos";
+    public boolean deleteVideo(int id, String author) {
+        String query = "DELETE FROM videos WHERE id = ? AND author = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setInt(1, id);
+            pstmt.setString(2, author);
+            return pstmt.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Returns one page of videos with like counts and user-liked status,
+     * all in a single query. Replaces the previous getAllVideos(),
+     * getLikeCounts() and getLikedVideoIds() calls.
+     *
+     * @param page       zero-based page index
+     * @param pageSize   number of rows per page
+     * @param loggedUser username of the current user (for user_liked flag)
+     */
+    public List<Video> getVideosPage(int page, int pageSize, String loggedUser) {
+        List<Video> videos = new ArrayList<>();
+
+        // Single JOIN: one DB round-trip instead of three.
+        // COUNT(l.username)  → like count per video (NULL rows from LEFT JOIN not counted)
+        // SUM(CASE ...)      → 1 if loggedUser has liked this video, 0 otherwise
+        // Derby pagination   → OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+        String query =
+            "SELECT v.id, v.title, v.author, v.creation_date, v.duration, v.views, " +
+            "       v.description, v.format, v.file_path, v.original_filename, v.file_source, " +
+            "       COUNT(l.username) AS like_count, " +
+            "       SUM(CASE WHEN l.username = ? THEN 1 ELSE 0 END) AS user_liked " +
+            "FROM videos v " +
+            "LEFT JOIN likes l ON v.id = l.video_id " +
+            "GROUP BY v.id, v.title, v.author, v.creation_date, v.duration, v.views, " +
+            "         v.description, v.format, v.file_path, v.original_filename, v.file_source " +
+            "ORDER BY v.id DESC " +
+            "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setString(1, loggedUser);
+            pstmt.setInt(2, page * pageSize);
+            pstmt.setInt(3, pageSize);
 
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
@@ -145,6 +189,8 @@ public class DBManager {
                     rs.getString("original_filename"),
                     rs.getString("file_source")
                 );
+                video.setLikeCount(rs.getInt("like_count"));
+                video.setUserLiked(rs.getInt("user_liked") > 0);
                 videos.add(video);
             }
 
@@ -154,26 +200,23 @@ public class DBManager {
         return videos;
     }
 
-    public boolean deleteVideo(int id, String author) {
-        // The author check in the WHERE clause ensures users can only
-        // delete their own videos, even if they craft a direct request
-        String query = "DELETE FROM videos WHERE id = ? AND author = ?";
+    /** Total number of videos — needed to calculate the number of pages. */
+    public int getVideoCount() {
+        String query = "SELECT COUNT(*) FROM videos";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
 
-            pstmt.setInt(1, id);
-            pstmt.setString(2, author);
-
-            return pstmt.executeUpdate() > 0;
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) return rs.getInt(1);
 
         } catch (Exception e) {
             e.printStackTrace();
-            return false;
         }
+        return 0;
     }
 
     // -------------------------------------------------------------------------
-    // LIKE METHODS
+    // LIKE METHODS  (kept for LikeVideoServlet)
     // -------------------------------------------------------------------------
 
     public boolean hasLiked(int videoId, String username) {
@@ -220,42 +263,5 @@ public class DBManager {
             e.printStackTrace();
             return false;
         }
-    }
-
-    // Returns a map of videoId -> like count for all videos
-    public java.util.Map<Integer, Integer> getLikeCounts() {
-        java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
-        String query = "SELECT video_id, COUNT(*) as total FROM likes GROUP BY video_id";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                counts.put(rs.getInt("video_id"), rs.getInt("total"));
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return counts;
-    }
-
-    // Returns the set of video IDs liked by a given user
-    public java.util.Set<Integer> getLikedVideoIds(String username) {
-        java.util.Set<Integer> liked = new java.util.HashSet<>();
-        String query = "SELECT video_id FROM likes WHERE username = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-
-            pstmt.setString(1, username);
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                liked.add(rs.getInt("video_id"));
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return liked;
     }
 }

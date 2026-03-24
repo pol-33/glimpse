@@ -1,7 +1,5 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="java.util.List"%>
-<%@page import="java.util.Map"%>
-<%@page import="java.util.Set"%>
 <%@page import="model.Video"%>
 <!DOCTYPE html>
 <html>
@@ -16,10 +14,11 @@
             response.sendRedirect("login.jsp");
             return;
         }
-        List<Video> videos          = (List<Video>) request.getAttribute("videos");
-        Map<Integer, Integer> likes = (Map<Integer, Integer>) request.getAttribute("likes");
-        Set<Integer> likedByUser    = (Set<Integer>) request.getAttribute("likedByUser");
-        String loggedUser           = (String) session.getAttribute("loggedUser");
+        List<Video> videos  = (List<Video>) request.getAttribute("videos");
+        String loggedUser   = (String) session.getAttribute("loggedUser");
+        int currentPage     = (Integer) request.getAttribute("currentPage");
+        int totalPages      = (Integer) request.getAttribute("totalPages");
+        int totalVideos     = (Integer) request.getAttribute("totalVideos");
     %>
 
     <div class="container py-5">
@@ -60,8 +59,6 @@
                 <tbody>
                 <%
                     for (Video v : videos) {
-                        int likeCount = likes.getOrDefault(v.getId(), 0);
-                        boolean userHasLiked = likedByUser.contains(v.getId());
                 %>
                     <tr>
                         <td style="color:var(--glimpse-muted); font-size:0.8rem;">
@@ -107,7 +104,7 @@
                         <td>
                             <span class="like-count">
                                 <i class="bi bi-heart-fill" style="font-size:0.85rem;"></i>
-                                <%= likeCount %>
+                                <%= v.getLikeCount() %>
                             </span>
                         </td>
                         <td class="actions-cell">
@@ -115,10 +112,11 @@
                                 <%-- Like / Unlike --%>
                                 <form action="LikeVideoServlet" method="POST">
                                     <input type="hidden" name="id" value="<%= v.getId() %>">
+                                    <input type="hidden" name="page" value="<%= currentPage %>">
                                     <button type="submit"
-                                            class="btn-glimpse-like <%= userHasLiked ? "active" : "" %>">
-                                        <i class="bi bi-heart<%= userHasLiked ? "-fill" : "" %> me-1"></i>
-                                        <%= userHasLiked ? "Unlike" : "Like" %>
+                                            class="btn-glimpse-like <%= v.isUserLiked() ? "active" : "" %>">
+                                        <i class="bi bi-heart<%= v.isUserLiked() ? "-fill" : "" %> me-1"></i>
+                                        <%= v.isUserLiked() ? "Unlike" : "Like" %>
                                     </button>
                                 </form>
 
@@ -127,6 +125,7 @@
                                     <form action="DeleteVideoServlet" method="POST"
                                           onsubmit="return confirm('Delete \'<%= v.getTitle() %>\'?');">
                                         <input type="hidden" name="id" value="<%= v.getId() %>">
+                                        <input type="hidden" name="page" value="<%= currentPage %>">
                                         <button type="submit" class="btn-glimpse-danger">
                                             <i class="bi bi-trash me-1"></i>Delete
                                         </button>
@@ -141,6 +140,31 @@
                 </tbody>
             </table>
         </div>
+
+        <%-- Pagination --%>
+        <% if (totalPages > 0) { %>
+        <div class="d-flex align-items-center justify-content-between mt-4">
+            <span style="color:var(--glimpse-muted); font-size:0.88rem;">
+                Page <%= currentPage + 1 %> of <%= totalPages %>
+                (<%= totalVideos %> videos total)
+            </span>
+            <div class="d-flex gap-2">
+                <% if (currentPage > 0) { %>
+                    <a href="ListVideosServlet?page=<%= currentPage - 1 %>"
+                       class="btn-glimpse-outline" style="padding:0.4rem 1rem;">
+                        <i class="bi bi-chevron-left me-1"></i>Previous
+                    </a>
+                <% } %>
+                <% if (currentPage < totalPages - 1) { %>
+                    <a href="ListVideosServlet?page=<%= currentPage + 1 %>"
+                       class="btn-glimpse" style="padding:0.4rem 1rem;">
+                        Next<i class="bi bi-chevron-right ms-1"></i>
+                    </a>
+                <% } %>
+            </div>
+        </div>
+        <% } %>
+
         <% } else { %>
             <div class="glimpse-card text-center py-5">
                 <i class="bi bi-camera-video" style="font-size:3rem; color:#C7D2FE;"></i>

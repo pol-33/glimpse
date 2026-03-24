@@ -15,6 +15,8 @@ public class Video {
     private String filePath;
     private String originalFilename;
     private String fileSource;
+    private int     likeCount  = 0;
+    private boolean userLiked  = false;
 
     // Used when registering a new video (id is not known yet)
     public Video(String title, String author, LocalDate creationDate,
@@ -55,6 +57,8 @@ public class Video {
     public String    getFilePath()         { return filePath; }
     public String    getOriginalFilename() { return originalFilename; }
     public String    getFileSource()       { return fileSource; }
+    public int       getLikeCount()             { return likeCount; }
+    public boolean   isUserLiked()              { return userLiked; }
 
     // Setters
     public void setId(int id)                        { this.id = id; }
@@ -68,4 +72,6 @@ public class Video {
     public void setFilePath(String filePath)         { this.filePath = filePath; }
     public void setOriginalFilename(String name)     { this.originalFilename = name; }
     public void setFileSource(String fileSource)     { this.fileSource = fileSource; }
+    public void      setLikeCount(int count)    { this.likeCount = count; }
+    public void      setUserLiked(boolean liked){ this.userLiked = liked; }
 }
