@@ -137,6 +137,45 @@ public class DBManager {
     }
 
     /**
+     * Fetches a single video by its primary key.
+     * Used by PlayVideoServlet to retrieve the file path before streaming.
+     * Returns null if the video does not exist or a DB error occurs.
+     */
+    public Video getVideoById(int id) {
+        String query =
+            "SELECT v.id, v.title, v.author, v.creation_date, v.duration, v.views, " +
+            "       v.description, v.format, v.file_path, v.original_filename, v.file_source " +
+            "FROM videos v WHERE v.id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                LocalDate creationDate = rs.getDate("creation_date").toLocalDate();
+                LocalTime duration     = rs.getTime("duration").toLocalTime();
+                return new Video(
+                    rs.getInt("id"),
+                    rs.getString("title"),
+                    rs.getString("author"),
+                    creationDate,
+                    duration,
+                    rs.getInt("views"),
+                    rs.getString("description"),
+                    rs.getString("format"),
+                    rs.getString("file_path"),
+                    rs.getString("original_filename"),
+                    rs.getString("file_source")
+                );
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
      * Returns one page of videos with like counts and user-liked status,
      * all in a single query. Replaces the previous getAllVideos(),
      * getLikeCounts() and getLikedVideoIds() calls.
@@ -216,7 +255,7 @@ public class DBManager {
     }
 
     // -------------------------------------------------------------------------
-    // LIKE METHODS  (kept for LikeVideoServlet)
+    // LIKE METHODS
     // -------------------------------------------------------------------------
 
     public boolean hasLiked(int videoId, String username) {

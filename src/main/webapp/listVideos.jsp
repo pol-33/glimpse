@@ -59,6 +59,7 @@
                 <tbody>
                 <%
                     for (Video v : videos) {
+                        boolean canPlay = "upload".equals(v.getFileSource());
                 %>
                     <tr>
                         <td style="color:var(--glimpse-muted); font-size:0.8rem;">
@@ -68,9 +69,10 @@
                             <%= v.getTitle() %>
                         </td>
                         <td>
-                            <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
-                                         padding:2px 10px; border-radius:20px; font-size:0.82rem;
-                                         font-weight:600;">
+                            <span style="background:var(--glimpse-light);
+                                         color:var(--glimpse-primary);
+                                         padding:2px 10px; border-radius:20px;
+                                         font-size:0.82rem; font-weight:600;">
                                 <%= v.getAuthor() %>
                             </span>
                         </td>
@@ -81,23 +83,26 @@
                         <td style="font-size:0.88rem;"><%= v.getViews() %></td>
                         <td>
                             <span style="background:#F1F5F9; color:var(--glimpse-muted);
-                                         padding:2px 8px; border-radius:4px; font-size:0.8rem;
-                                         font-family:monospace;">
+                                         padding:2px 8px; border-radius:4px;
+                                         font-size:0.8rem; font-family:monospace;">
                                 <%= v.getFormat() %>
                             </span>
                         </td>
-                        <td style="font-size:0.88rem; color:var(--glimpse-muted); max-width:180px;">
+                        <td style="font-size:0.88rem; color:var(--glimpse-muted);
+                                   max-width:180px;">
                             <%= v.getDescription() != null ? v.getDescription() : "" %>
                         </td>
                         <td>
                             <% if ("url".equals(v.getFileSource())) { %>
                                 <a href="<%= v.getFilePath() %>" target="_blank"
-                                   style="color:var(--glimpse-accent); font-size:0.88rem; font-weight:600;">
+                                   style="color:var(--glimpse-accent); font-size:0.88rem;
+                                          font-weight:600;">
                                     <i class="bi bi-box-arrow-up-right me-1"></i>Open link
                                 </a>
                             <% } else { %>
                                 <span style="color:var(--glimpse-muted); font-size:0.85rem;">
-                                    <i class="bi bi-file-earmark-play me-1"></i><%= v.getOriginalFilename() %>
+                                    <i class="bi bi-file-earmark-play me-1"></i>
+                                    <%= v.getOriginalFilename() %>
                                 </span>
                             <% } %>
                         </td>
@@ -109,9 +114,19 @@
                         </td>
                         <td class="actions-cell">
                             <div class="d-flex gap-2 flex-wrap">
+
+                                <%-- Play (uploaded files only, navigates to dedicated player page) --%>
+                                <% if (canPlay) { %>
+                                    <a href="PlayVideoServlet?id=<%= v.getId() %>"
+                                       class="btn-glimpse-play"
+                                       style="text-decoration:none; display:inline-block;">
+                                        <i class="bi bi-play-circle me-1"></i>Play
+                                    </a>
+                                <% } %>
+
                                 <%-- Like / Unlike --%>
                                 <form action="LikeVideoServlet" method="POST">
-                                    <input type="hidden" name="id" value="<%= v.getId() %>">
+                                    <input type="hidden" name="id"   value="<%= v.getId() %>">
                                     <input type="hidden" name="page" value="<%= currentPage %>">
                                     <button type="submit"
                                             class="btn-glimpse-like <%= v.isUserLiked() ? "active" : "" %>">
@@ -123,8 +138,8 @@
                                 <%-- Delete (own videos only) --%>
                                 <% if (loggedUser.equals(v.getAuthor())) { %>
                                     <form action="DeleteVideoServlet" method="POST"
-                                          onsubmit="return confirm('Delete \'<%= v.getTitle() %>\'?');">
-                                        <input type="hidden" name="id" value="<%= v.getId() %>">
+                                          onsubmit="return confirm('Delete this video?');">
+                                        <input type="hidden" name="id"   value="<%= v.getId() %>">
                                         <input type="hidden" name="page" value="<%= currentPage %>">
                                         <button type="submit" class="btn-glimpse-danger">
                                             <i class="bi bi-trash me-1"></i>Delete

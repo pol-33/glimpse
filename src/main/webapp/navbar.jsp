@@ -63,18 +63,18 @@
         text-decoration: none;
         transition: all 0.2s;
     }
-
+    
     .glimpse-nav .btn-nav:hover {
         background: var(--glimpse-accent);
         color: #fff;
     }
-
+    
     .glimpse-nav .btn-nav-primary {
         background: var(--glimpse-accent);
         color: #fff;
         border-color: var(--glimpse-accent);
     }
-
+    
     .glimpse-nav .btn-nav-primary:hover {
         background: var(--glimpse-primary);
         border-color: var(--glimpse-primary);
@@ -89,14 +89,14 @@
         box-shadow: 0 4px 24px rgba(67, 56, 202, 0.07);
         padding: 2.5rem;
     }
-
+    
     .glimpse-card h2 {
         font-size: 1.8rem;
         font-weight: 800;
         color: var(--glimpse-dark);
         margin-bottom: 0.25rem;
     }
-
+    
     .glimpse-card .subtitle {
         color: var(--glimpse-muted);
         font-size: 0.95rem;
@@ -112,7 +112,7 @@
         letter-spacing: 0.5px;
         margin-bottom: 0.35rem;
     }
-
+    
     .form-control {
         border: 1.5px solid var(--glimpse-border);
         border-radius: 8px;
@@ -121,7 +121,7 @@
         font-size: 0.95rem;
         transition: border-color 0.2s, box-shadow 0.2s;
     }
-
+    
     .form-control:focus {
         border-color: var(--glimpse-accent);
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
@@ -143,13 +143,13 @@
         text-decoration: none;
         display: inline-block;
     }
-
+    
     .btn-glimpse:hover {
         background: var(--glimpse-accent);
         color: #fff;
         transform: translateY(-1px);
     }
-
+    
     .btn-glimpse-outline {
         background: transparent;
         color: var(--glimpse-primary);
@@ -161,6 +161,8 @@
         font-size: 0.85rem;
         cursor: pointer;
         transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
     }
 
     .btn-glimpse-outline:hover {
@@ -196,17 +198,31 @@
         cursor: pointer;
         transition: all 0.2s;
     }
-
+    
     .btn-glimpse-like:hover, .btn-glimpse-like.active {
         background: var(--glimpse-accent);
         color: #fff;
         border-color: var(--glimpse-accent);
     }
 
-    .btn-glimpse-like.active {
-        background: var(--glimpse-accent);
+    /* Play button ? green tint so it stands out from Like */
+    .btn-glimpse-play {
+        background: #F0FDF4;
+        color: #15803D;
+        border: 1.5px solid #BBF7D0;
+        border-radius: 8px;
+        padding: 0.4rem 1rem;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-glimpse-play:hover {
+        background: #16A34A;
         color: #fff;
-        border-color: var(--glimpse-accent);
+        border-color: #16A34A;
     }
 
     /* Alerts */
@@ -219,7 +235,7 @@
         font-size: 0.9rem;
         font-weight: 500;
     }
-
+    
     .alert-glimpse-info {
         background: var(--glimpse-light);
         border: 1.5px solid #C7D2FE;
@@ -241,12 +257,12 @@
         border: 1.5px solid var(--glimpse-border);
         box-shadow: 0 4px 24px rgba(67, 56, 202, 0.07);
     }
-
+    
     .glimpse-table thead tr {
         background: var(--glimpse-dark);
         color: #fff;
     }
-
+    
     .glimpse-table thead th {
         padding: 1rem 1.25rem;
         font-size: 0.8rem;
@@ -256,7 +272,7 @@
         border: none;
         font-family: 'DM Sans', sans-serif;
     }
-
+    
     .glimpse-table tbody tr {
         border-bottom: 1px solid var(--glimpse-border);
         transition: background 0.15s;
@@ -290,7 +306,7 @@
         color: var(--glimpse-dark);
         margin-bottom: 0.25rem;
     }
-
+    
     .page-subtitle {
         color: var(--glimpse-muted);
         font-size: 0.95rem;
@@ -315,7 +331,13 @@
         </a>
         <% if (isLoggedIn) { %>
         <div class="d-flex align-items-center gap-3">
-            <span class="nav-username"><i class="bi bi-person-circle me-1"></i><%= navUser %></span>
+            <span class="nav-username">
+                <i class="bi bi-person-circle me-1"></i><%= navUser %>
+            </span>
+            <%-- Search navigates to the search form page, not directly to the servlet --%>
+            <a href="search.jsp" class="btn-nav">
+                <i class="bi bi-search me-1"></i>Search
+            </a>
             <a href="registerVideo.jsp" class="btn-nav btn-nav-primary">
                 <i class="bi bi-plus-lg me-1"></i>New Video
             </a>
