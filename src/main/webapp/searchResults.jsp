@@ -15,8 +15,8 @@
             return;
         }
 
-        List<Video> videos    = (List<Video>) request.getAttribute("videos");
-        String searchError    = (String) request.getAttribute("searchError");
+        List<Video> videos  = (List<Video>) request.getAttribute("videos");
+        String searchError  = (String) request.getAttribute("searchError");
 
         String qTitle  = (String) request.getAttribute("q_title");
         String qAuthor = (String) request.getAttribute("q_author");
@@ -43,21 +43,51 @@
 
         <%-- Show active filters as pills --%>
         <p class="page-subtitle" style="margin-bottom:1.5rem;">
-            <% if (!qTitle.isEmpty())  { %><span style="background:var(--glimpse-light); color:var(--glimpse-primary); padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600; margin-right:6px;">Title: <%= qTitle %></span><% } %>
-            <% if (!qAuthor.isEmpty()) { %><span style="background:var(--glimpse-light); color:var(--glimpse-primary); padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600; margin-right:6px;">Author: <%= qAuthor %></span><% } %>
-            <% if (!qYear.isEmpty())   { %><span style="background:var(--glimpse-light); color:var(--glimpse-primary); padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600; margin-right:6px;">Year: <%= qYear %></span><% } %>
-            <% if (!qMonth.isEmpty())  { %><span style="background:var(--glimpse-light); color:var(--glimpse-primary); padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600; margin-right:6px;">Month: <%= qMonth %></span><% } %>
-            <% if (!qDay.isEmpty())    { %><span style="background:var(--glimpse-light); color:var(--glimpse-primary); padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600; margin-right:6px;">Day: <%= qDay %></span><% } %>
+            <% if (!qTitle.isEmpty())  { %>
+                <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
+                             padding:2px 10px; border-radius:20px;
+                             font-size:0.82rem; font-weight:600; margin-right:6px;">
+                    Title: <%= qTitle %>
+                </span>
+            <% } %>
+            <% if (!qAuthor.isEmpty()) { %>
+                <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
+                             padding:2px 10px; border-radius:20px;
+                             font-size:0.82rem; font-weight:600; margin-right:6px;">
+                    Author: <%= qAuthor %>
+                </span>
+            <% } %>
+            <% if (!qYear.isEmpty())   { %>
+                <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
+                             padding:2px 10px; border-radius:20px;
+                             font-size:0.82rem; font-weight:600; margin-right:6px;">
+                    Year: <%= qYear %>
+                </span>
+            <% } %>
+            <% if (!qMonth.isEmpty())  { %>
+                <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
+                             padding:2px 10px; border-radius:20px;
+                             font-size:0.82rem; font-weight:600; margin-right:6px;">
+                    Month: <%= qMonth %>
+                </span>
+            <% } %>
+            <% if (!qDay.isEmpty())    { %>
+                <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
+                             padding:2px 10px; border-radius:20px;
+                             font-size:0.82rem; font-weight:600; margin-right:6px;">
+                    Day: <%= qDay %>
+                </span>
+            <% } %>
         </p>
 
-        <%-- REST service error --%>
+        <%-- REST offline error --%>
         <% if (searchError != null) { %>
             <div class="alert-glimpse-error mb-4">
                 <i class="bi bi-wifi-off me-2"></i><%= searchError %>
             </div>
         <% } %>
 
-        <%-- Results --%>
+        <%-- Results table --%>
         <% if (videos != null && !videos.isEmpty()) { %>
 
             <p style="color:var(--glimpse-muted); font-size:0.9rem; margin-bottom:1rem;">
