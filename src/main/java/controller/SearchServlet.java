@@ -16,20 +16,13 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import model.DBManager;
 import model.Video;
 
 /**
- * Calls glimpse-rest GET /resources/videos/search and forwards results to
- * searchResults.jsp.
- *
- * Uses plain java.net.HttpURLConnection (java.base module — no extra deps).
- * Parses the JSON response with a hand-rolled parser to avoid jakarta.json
- * dependency issues in some GlassFish configurations.
- *
- * If glimpse-rest is unreachable, the user sees a friendly error message
- * instead of a 500 crash.
- *
- * URL: GET /SearchServlet?title=X&author=Y&year=2026&month=3&day=19
+ * Calls glimpse-rest GET /resources/videos/search, then enriches the results
+ * with like data from the local DB (via enrichWithLikes), and forwards to
+ * searchResults.jsp which reuses the same videoTable.jsp fragment as listVideos.jsp.
  */
 @WebServlet(name = "SearchServlet", urlPatterns = {"/SearchServlet"})
 public class SearchServlet extends HttpServlet {
@@ -44,14 +37,16 @@ public class SearchServlet extends HttpServlet {
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
 
-        // ── Session guard ──────────────────────────────────────────────────
+        // Session guard
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedUser") == null) {
             response.sendRedirect("login.jsp");
             return;
         }
 
-        // ── Read and trim search parameters ────────────────────────────────
+        String loggedUser = (String) session.getAttribute("loggedUser");
+        
+        // Read and trim search parameters
         String title  = emptyToNull(request.getParameter("title"));
         String author = emptyToNull(request.getParameter("author"));
         String year   = emptyToNull(request.getParameter("year"));
@@ -59,17 +54,15 @@ public class SearchServlet extends HttpServlet {
         String day    = emptyToNull(request.getParameter("day"));
 
         // Require at least one criterion
-        if (title == null && author == null && year == null
-                && month == null && day == null) {
-            request.setAttribute("searchError",
-                "Please fill in at least one search field.");
+        if (title == null && author == null && year == null && month == null && day == null) {
+            request.setAttribute("searchError", "Please fill in at least one search field.");
             request.setAttribute("videos", new ArrayList<Video>());
             echoParams(request, title, author, year, month, day);
             request.getRequestDispatcher("searchResults.jsp").forward(request, response);
             return;
         }
 
-        // ── Build REST URL ─────────────────────────────────────────────────
+        // Build REST URL
         StringBuilder urlSb = new StringBuilder(REST_SEARCH_URL).append("?1=1");
         appendEncoded(urlSb, "title",  title);
         appendEncoded(urlSb, "author", author);
@@ -77,7 +70,7 @@ public class SearchServlet extends HttpServlet {
         appendEncoded(urlSb, "month",  month);
         appendEncoded(urlSb, "day",    day);
 
-        // ── Call REST service via HttpURLConnection ─────────────────────────
+        // Call REST service via HttpURLConnection
         List<Video> videos = null;
         HttpURLConnection conn = null;
         try {
@@ -88,15 +81,11 @@ public class SearchServlet extends HttpServlet {
             conn.setConnectTimeout(TIMEOUT_MS);
             conn.setReadTimeout(TIMEOUT_MS);
 
-            int status = conn.getResponseCode();
-            if (status == 200) {
+            if (conn.getResponseCode() == 200) {
                 try (InputStream in = conn.getInputStream()) {
                     String json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
                     videos = parseJsonArray(json);
                 }
-            } else {
-                // REST returned an error code — treat as service failure
-                videos = null;
             }
         } catch (Exception e) {
             // Connection refused, timeout, etc.
@@ -105,21 +94,31 @@ public class SearchServlet extends HttpServlet {
             if (conn != null) conn.disconnect();
         }
 
-        // ── Forward to view ────────────────────────────────────────────────
+        // Enrich with likes from local DB
+        if (videos != null) {
+            new DBManager().enrichWithLikes(videos, loggedUser);
+        }
+
         if (videos == null) {
             request.setAttribute("searchError",
                 "The search service is temporarily unavailable. " +
-                "Please make sure glimpse-rest is running and try again.");
+                "Make sure glimpse-rest is running and try again.");
             request.setAttribute("videos", new ArrayList<Video>());
         } else {
             request.setAttribute("videos", videos);
         }
 
+        // searchResults.jsp uses the same videoTable.jsp fragment, which reads
+        // currentPage; for search we always pass 0 (no pagination needed)
+        request.setAttribute("currentPage", 0);
+        request.setAttribute("totalPages",  1);
+        request.setAttribute("totalVideos", videos != null ? videos.size() : 0);
+
         echoParams(request, title, author, year, month, day);
         request.getRequestDispatcher("searchResults.jsp").forward(request, response);
     }
 
-    // ── JSON parsing — no external library ────────────────────────────────────
+    // JSON array parser
 
     /**
      * Parses a JSON array of video objects returned by glimpse-rest.

@@ -60,9 +60,6 @@
                                        placeholder="Day" min="1" max="31">
                             </div>
                         </div>
-                        <small style="color:var(--glimpse-muted); font-size:0.82rem;">
-                            You can enter year only, year+month, or the full date.
-                        </small>
                     </div>
 
                     <button type="submit" class="btn-glimpse w-100">

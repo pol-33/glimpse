@@ -18,12 +18,12 @@ import model.Video;
  *
  * Flow:
  *   1. Session guard.
- *   2. Look up the video in glimpse's own DB (to get the stored filename and verify
- *      it is an uploaded file — URL-based videos cannot be streamed from our server).
- *   3. Call PUT /resources/videos/{id}/views on glimpse-rest to increment the
- *      view counter. This is done via a plain HttpURLConnection so no extra
- *      dependencies (java.net.http module) are needed.
- *   4. Store updated view count (or -1 if REST is offline) in a request attribute
+ *   2. Look up the video in glimpse's DB using the new getVideoById(id, loggedUser)
+ *      which returns like data in the same JOIN.
+ *   3. Verify it is an uploaded file (URL-based videos cannot be streamed).
+ *   4. Call PUT /resources/videos/{id}/views on glimpse-rest (non-blocking) to
+ *      increment the view counter.
+ *   5. Store updated view count (or -1 if REST is offline) in a request attribute
  *      and forward to playVideo.jsp.
  *
  * URL pattern: GET /PlayVideoServlet?id=<videoId>
@@ -48,11 +48,12 @@ public class PlayVideoServlet extends HttpServlet {
             return;
         }
 
-        // Parse video ID
-        String idStr = request.getParameter("id");
+        String loggedUser = (String) session.getAttribute("loggedUser");
+
+        // Parse video id
         int id;
         try {
-            id = Integer.parseInt(idStr);
+            id = Integer.parseInt(request.getParameter("id"));
         } catch (NumberFormatException e) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid video id.");
             return;
@@ -60,7 +61,7 @@ public class PlayVideoServlet extends HttpServlet {
 
         // Load video from glimpse's DB
         DBManager db = new DBManager();
-        Video video = db.getVideoById(id);
+        Video video = db.getVideoById(id, loggedUser);
 
         if (video == null) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Video not found.");
@@ -80,7 +81,7 @@ public class PlayVideoServlet extends HttpServlet {
         // simply not be updated and a warning is shown on the player page.
         int updatedViews = callRestPut(id);
         request.setAttribute("updatedViews", updatedViews); // -1 = REST offline
-
+        
         // Forward to the player view
         request.setAttribute("video", video);
         request.getRequestDispatcher("playVideo.jsp").forward(request, response);
@@ -98,30 +99,23 @@ public class PlayVideoServlet extends HttpServlet {
             conn.setRequestMethod("PUT");
             conn.setConnectTimeout(TIMEOUT_MS);
             conn.setReadTimeout(TIMEOUT_MS);
-            conn.setDoOutput(false);
 
-            int status = conn.getResponseCode();
-            if (status != 200) return -1;
+            if (conn.getResponseCode() != 200) return -1;
 
             // Read response body: {"id":X,"views":Y}
             try (InputStream in = conn.getInputStream()) {
-                byte[] buf = in.readAllBytes();
-                String body = new String(buf, "UTF-8");
+                String body = new String(in.readAllBytes(), "UTF-8");
                 return parseViewsFromJson(body);
             }
-
         } catch (Exception e) {
-            // glimpse-rest is offline — fail gracefully
+            // glimpse-rest is offline, fail gracefully
             return -1;
         } finally {
             if (conn != null) conn.disconnect();
         }
     }
 
-    /**
-     * Extracts the "views" integer from a simple JSON object like
-     * {"id":1,"views":42} without any external JSON library.
-     */
+    /** Extracts "views" int from {"id":1,"views":42} without a JSON lib. */
     private int parseViewsFromJson(String json) {
         String key = "\"views\":";
         int idx = json.indexOf(key);
