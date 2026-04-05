@@ -4,6 +4,9 @@ nbbuild/
 nbdist/
 .nb-gradle/
 
+build/
+dist/
+
 # Maven
 target/
 
