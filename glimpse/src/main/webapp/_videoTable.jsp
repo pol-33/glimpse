@@ -100,6 +100,11 @@
                                style="text-decoration:none; display:inline-block;">
                                 <i class="bi bi-play-circle me-1"></i>Play
                             </a>
+                            <a href="DownloadVideoServlet?id=<%= v.getId() %>"
+                               class="btn-glimpse-outline"
+                               style="text-decoration:none; display:inline-block;">
+                                <i class="bi bi-download me-1"></i>Download
+                            </a>
                         <% } %>
 
                         <%-- Like / Unlike ? AJAX, no page reload --%>

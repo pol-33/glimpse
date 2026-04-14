@@ -19,7 +19,10 @@
         // Same variable names as listVideos.jsp so videoTable.jsp works identically
         List<Video> videos  = (List<Video>) request.getAttribute("videos");
         String loggedUser   = (String) session.getAttribute("loggedUser");
-        int currentPage     = 0; // no pagination for search results
+        int currentPage     = (Integer) request.getAttribute("currentPage");
+        int totalPages      = (Integer) request.getAttribute("totalPages");
+        int totalVideos     = (Integer) request.getAttribute("totalVideos");
+        String searchBaseUrl = (String) request.getAttribute("searchBaseUrl");
 
         String searchError  = (String) request.getAttribute("searchError");
 
@@ -86,12 +89,35 @@
         <% if (videos != null && !videos.isEmpty()) { %>
 
             <p style="color:var(--glimpse-muted); font-size:0.9rem; margin-bottom:1rem;">
-                <strong><%= videos.size() %></strong>
-                video<%= videos.size() == 1 ? "" : "s" %> found.
+                <strong><%= totalVideos %></strong>
+                video<%= totalVideos == 1 ? "" : "s" %> found.
             </p>
 
             <%-- Shared table fragment --%>
             <%@include file="_videoTable.jsp"%>
+
+            <% if (totalPages > 1) { %>
+            <div class="d-flex align-items-center justify-content-between mt-4">
+                <span style="color:var(--glimpse-muted); font-size:0.88rem;">
+                    Page <%= currentPage + 1 %> of <%= totalPages %>
+                    (<%= totalVideos %> videos total)
+                </span>
+                <div class="d-flex gap-2">
+                    <% if (currentPage > 0) { %>
+                        <a href="<%= ViewUtils.attr(searchBaseUrl + "&page=" + (currentPage - 1)) %>"
+                           class="btn-glimpse-outline" style="padding:0.4rem 1rem;">
+                            <i class="bi bi-chevron-left me-1"></i>Previous
+                        </a>
+                    <% } %>
+                    <% if (currentPage < totalPages - 1) { %>
+                        <a href="<%= ViewUtils.attr(searchBaseUrl + "&page=" + (currentPage + 1)) %>"
+                           class="btn-glimpse" style="padding:0.4rem 1rem;">
+                            Next<i class="bi bi-chevron-right ms-1"></i>
+                        </a>
+                    <% } %>
+                </div>
+            </div>
+            <% } %>
 
         <% } else if (searchError == null) { %>
             <div class="glimpse-card text-center py-5">

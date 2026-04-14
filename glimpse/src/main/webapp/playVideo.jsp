@@ -194,6 +194,11 @@
 
             <!-- AJAX Like -->
             <div style="margin-left:auto;">
+                <a href="DownloadVideoServlet?id=<%= video.getId() %>"
+                   class="btn-glimpse-outline"
+                   style="text-decoration:none; display:inline-block; margin-right:0.5rem;">
+                    <i class="bi bi-download me-1"></i>Download
+                </a>
                 <button
                     class="btn-glimpse-like<%= userLiked ? " active" : "" %>"
                     id="like-btn-<%= video.getId() %>"

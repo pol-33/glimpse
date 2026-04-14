@@ -21,7 +21,7 @@ public class DBManager {
         );
     }
 
-    // ── Increment view counter ────────────────────────────────────────────────
+    // Increment view counter
 
     /**
      * Atomically increments the view counter of a video and returns
@@ -49,7 +49,7 @@ public class DBManager {
         return -1;
     }
 
-    // ── Search ────────────────────────────────────────────────────────────────
+    // Search
 
     /**
      * Searches videos by any combination of criteria.
@@ -57,62 +57,99 @@ public class DBManager {
      *   - Integer params → exact match on the date component
      *   - null / blank   → no restriction on that field
      */
-    public List<VideoInfo> searchVideos(String title, String author,
-                                        Integer year, Integer month, Integer day) {
+    public SearchResult searchVideos(String title, String author,
+                                     Integer year, Integer month, Integer day,
+                                     int page, int pageSize) {
         List<VideoInfo> results = new ArrayList<>();
 
-        StringBuilder sql = new StringBuilder(
-            "SELECT id, title, author, creation_date, duration, views, " +
-            "       description, format, file_source " +
-            "FROM videos WHERE 1=1"
-        );
+        StringBuilder where = new StringBuilder(" FROM videos WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         if (title  != null && !title.trim().isEmpty()) {
-            sql.append(" AND LOWER(title)  LIKE LOWER(?)");
+            where.append(" AND LOWER(title)  LIKE LOWER(?)");
             params.add("%" + title.trim() + "%");
         }
         if (author != null && !author.trim().isEmpty()) {
-            sql.append(" AND LOWER(author) LIKE LOWER(?)");
+            where.append(" AND LOWER(author) LIKE LOWER(?)");
             params.add("%" + author.trim() + "%");
         }
-        if (year  != null) { sql.append(" AND YEAR(creation_date)  = ?"); params.add(year);  }
-        if (month != null) { sql.append(" AND MONTH(creation_date) = ?"); params.add(month); }
-        if (day   != null) { sql.append(" AND DAY(creation_date)   = ?"); params.add(day);   }
+        if (year  != null) { where.append(" AND YEAR(creation_date)  = ?"); params.add(year);  }
+        if (month != null) { where.append(" AND MONTH(creation_date) = ?"); params.add(month); }
+        if (day   != null) { where.append(" AND DAY(creation_date)   = ?"); params.add(day);   }
 
-        sql.append(" ORDER BY id DESC");
+        String dataSql =
+            "SELECT id, title, author, creation_date, duration, views, " +
+            "       description, format, file_source, file_path" +
+            where +
+            " ORDER BY id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+        String countSql = "SELECT COUNT(*)" + where;
 
-            for (int i = 0; i < params.size(); i++) {
-                Object p = params.get(i);
-                if (p instanceof String) pstmt.setString(i + 1, (String) p);
-                else                     pstmt.setInt(i + 1, (Integer) p);
+        int total = 0;
+
+        try (Connection conn = getConnection()) {
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
+                bindParams(countStmt, params);
+                ResultSet rs = countStmt.executeQuery();
+                if (rs.next()) total = rs.getInt(1);
             }
 
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                results.add(new VideoInfo(
-                    rs.getInt("id"),
-                    rs.getString("title"),
-                    rs.getString("author"),
-                    rs.getDate("creation_date").toString(),  // yyyy-MM-dd
-                    rs.getTime("duration").toString(),        // HH:mm:ss
-                    rs.getInt("views"),
-                    rs.getString("description"),
-                    rs.getString("format"),
-                    rs.getString("file_source")              // "url" | "upload"
-                ));
+            try (PreparedStatement pstmt = conn.prepareStatement(dataSql)) {
+                bindParams(pstmt, params);
+                pstmt.setInt(params.size() + 1, page * pageSize);
+                pstmt.setInt(params.size() + 2, pageSize);
+
+                ResultSet rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    String fileSource = rs.getString("file_source");
+                    String externalUrl = "url".equals(fileSource)
+                        ? rs.getString("file_path")
+                        : null;
+
+                    results.add(new VideoInfo(
+                        rs.getInt("id"),
+                        rs.getString("title"),
+                        rs.getString("author"),
+                        rs.getDate("creation_date").toString(),  // yyyy-MM-dd
+                        rs.getTime("duration").toString(),        // HH:mm:ss
+                        rs.getInt("views"),
+                        rs.getString("description"),
+                        rs.getString("format"),
+                        fileSource,
+                        externalUrl
+                    ));
+                }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return results;
+        return new SearchResult(results, total, page, pageSize);
     }
 
-    // ── VideoInfo DTO ─────────────────────────────────────────────────────────
+    private void bindParams(PreparedStatement pstmt, List<Object> params) throws Exception {
+        for (int i = 0; i < params.size(); i++) {
+            Object p = params.get(i);
+            if (p instanceof String) pstmt.setString(i + 1, (String) p);
+            else                     pstmt.setInt(i + 1, (Integer) p);
+        }
+    }
+
+    // VideoInfo DTO
+
+    public static class SearchResult {
+        public final List<VideoInfo> items;
+        public final int total;
+        public final int page;
+        public final int pageSize;
+
+        SearchResult(List<VideoInfo> items, int total, int page, int pageSize) {
+            this.items = items;
+            this.total = total;
+            this.page = page;
+            this.pageSize = pageSize;
+        }
+    }
 
     /** Lightweight DTO used only within glimpse-rest. */
     public static class VideoInfo {
@@ -125,10 +162,12 @@ public class DBManager {
         public final String description;
         public final String format;
         public final String fileSource;    // "url" | "upload"
+        public final String externalUrl;   // only for URL-based videos
 
         VideoInfo(int id, String title, String author,
                   String creationDate, String duration, int views,
-                  String description, String format, String fileSource) {
+                  String description, String format, String fileSource,
+                  String externalUrl) {
             this.id           = id;
             this.title        = title;
             this.author       = author;
@@ -138,6 +177,7 @@ public class DBManager {
             this.description  = description;
             this.format       = format;
             this.fileSource   = fileSource;
+            this.externalUrl  = externalUrl;
         }
     }
 }

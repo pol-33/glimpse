@@ -29,7 +29,7 @@ import java.util.List;
 @Path("videos")
 public class VideoResource {
 
-    // ── PUT /videos/{id}/views ────────────────────────────────────────────────
+    // PUT /videos/{id}/views
     //
     // Called by glimpse every time a user starts playing an uploaded video.
     // Method : PUT  — partial update of an existing resource (the view counter).
@@ -53,7 +53,7 @@ public class VideoResource {
         return Response.ok("{\"id\":" + id + ",\"views\":" + newViews + "}").build();
     }
 
-    // ── GET /videos/search ────────────────────────────────────────────────────
+    // GET /videos/search
     //
     // Searches videos via URL query parameters. All parameters are optional.
     // Method : GET
@@ -70,12 +70,14 @@ public class VideoResource {
             @QueryParam("author") String author,
             @QueryParam("year")   String year,
             @QueryParam("month")  String month,
-            @QueryParam("day")    String day) {
+            @QueryParam("day")    String day,
+            @QueryParam("page")   String page,
+            @QueryParam("pageSize") String pageSize) {
 
-        return doSearch(title, author, year, month, day);
+        return doSearch(title, author, year, month, day, page, pageSize);
     }
 
-    // ── POST /videos/search ───────────────────────────────────────────────────
+    // POST /videos/search
     //
     // Same semantics as GET search. Offered as POST so the glimpse web app
     // can submit a standard HTML form without params in the URL.
@@ -92,32 +94,42 @@ public class VideoResource {
             @FormParam("author") String author,
             @FormParam("year")   String year,
             @FormParam("month")  String month,
-            @FormParam("day")    String day) {
+            @FormParam("day")    String day,
+            @FormParam("page")   String page,
+            @FormParam("pageSize") String pageSize) {
 
-        return doSearch(title, author, year, month, day);
+        return doSearch(title, author, year, month, day, page, pageSize);
     }
 
-    // ── Shared search logic ───────────────────────────────────────────────────
+    // Shared search logic
 
     private Response doSearch(String title, String author,
-                              String year, String month, String day) {
+                              String year, String month, String day,
+                              String page, String pageSize) {
         Integer y = toInt(year);
         Integer m = toInt(month);
         Integer d = toInt(day);
+        int safePage = Math.max(0, toInt(page, 0));
+        int safePageSize = Math.min(100, Math.max(1, toInt(pageSize, 20)));
 
         DBManager db = new DBManager();
-        List<DBManager.VideoInfo> videos = db.searchVideos(title, author, y, m, d);
+        DBManager.SearchResult result =
+            db.searchVideos(title, author, y, m, d, safePage, safePageSize);
 
-        return Response.ok(toJson(videos)).build();
+        return Response.ok(toJson(result)).build();
     }
 
-    // ── Hand-rolled JSON serialisation (no extra dependencies) ───────────────
+    // Hand-rolled JSON serialisation (no extra dependencies) 
 
-    private String toJson(List<DBManager.VideoInfo> list) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < list.size(); i++) {
+    private String toJson(DBManager.SearchResult result) {
+        StringBuilder sb = new StringBuilder("{")
+            .append("\"page\":").append(result.page).append(",")
+            .append("\"pageSize\":").append(result.pageSize).append(",")
+            .append("\"total\":").append(result.total).append(",")
+            .append("\"items\":[");
+        for (int i = 0; i < result.items.size(); i++) {
             if (i > 0) sb.append(",");
-            DBManager.VideoInfo v = list.get(i);
+            DBManager.VideoInfo v = result.items.get(i);
             sb.append("{")
               .append("\"id\":").append(v.id).append(",")
               .append("\"title\":").append(qs(v.title)).append(",")
@@ -127,10 +139,11 @@ public class VideoResource {
               .append("\"views\":").append(v.views).append(",")
               .append("\"description\":").append(qs(v.description)).append(",")
               .append("\"format\":").append(qs(v.format)).append(",")
-              .append("\"fileSource\":").append(qs(v.fileSource))
+              .append("\"fileSource\":").append(qs(v.fileSource)).append(",")
+              .append("\"externalUrl\":").append(qs(v.externalUrl))
               .append("}");
         }
-        return sb.append("]").toString();
+        return sb.append("]}").toString();
     }
 
     /** Wraps a value as a JSON quoted string, handling nulls and escapes. */
@@ -147,5 +160,10 @@ public class VideoResource {
         if (s == null || s.trim().isEmpty()) return null;
         try { return Integer.parseInt(s.trim()); }
         catch (NumberFormatException e) { return null; }
+    }
+
+    private int toInt(String s, int fallback) {
+        Integer value = toInt(s);
+        return value != null ? value : fallback;
     }
 }

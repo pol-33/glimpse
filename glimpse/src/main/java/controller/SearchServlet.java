@@ -31,6 +31,7 @@ public class SearchServlet extends HttpServlet {
         "http://localhost:8080/glimpse-rest/resources/videos/search";
 
     private static final int TIMEOUT_MS = 5_000;
+    private static final int PAGE_SIZE = 20;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -52,11 +53,15 @@ public class SearchServlet extends HttpServlet {
         String year   = emptyToNull(request.getParameter("year"));
         String month  = emptyToNull(request.getParameter("month"));
         String day    = emptyToNull(request.getParameter("day"));
+        int page = parsePage(request.getParameter("page"));
 
         // Require at least one criterion
         if (title == null && author == null && year == null && month == null && day == null) {
             request.setAttribute("searchError", "Please fill in at least one search field.");
             request.setAttribute("videos", new ArrayList<Video>());
+            request.setAttribute("currentPage", 0);
+            request.setAttribute("totalPages", 0);
+            request.setAttribute("totalVideos", 0);
             echoParams(request, title, author, year, month, day);
             request.getRequestDispatcher("searchResults.jsp").forward(request, response);
             return;
@@ -69,9 +74,11 @@ public class SearchServlet extends HttpServlet {
         appendEncoded(urlSb, "year",   year);
         appendEncoded(urlSb, "month",  month);
         appendEncoded(urlSb, "day",    day);
+        appendEncoded(urlSb, "page",   String.valueOf(page));
+        appendEncoded(urlSb, "pageSize", String.valueOf(PAGE_SIZE));
 
         // Call REST service via HttpURLConnection
-        List<Video> videos = null;
+        SearchResponse searchResponse = null;
         HttpURLConnection conn = null;
         try {
             URL url = new URL(urlSb.toString());
@@ -84,47 +91,57 @@ public class SearchServlet extends HttpServlet {
             if (conn.getResponseCode() == 200) {
                 try (InputStream in = conn.getInputStream()) {
                     String json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                    videos = parseJsonArray(json);
+                    searchResponse = parseSearchResponse(json);
                 }
             }
         } catch (Exception e) {
             // Connection refused, timeout, etc.
-            videos = null;
+            searchResponse = null;
         } finally {
             if (conn != null) conn.disconnect();
         }
 
         // Enrich with likes from local DB
-        if (videos != null) {
-            new DBManager().enrichWithLikes(videos, loggedUser);
+        if (searchResponse != null) {
+            new DBManager().enrichWithLikes(searchResponse.items, loggedUser);
         }
 
-        if (videos == null) {
+        if (searchResponse == null) {
             request.setAttribute("searchError",
                 "The search service is temporarily unavailable. " +
                 "Make sure glimpse-rest is running and try again.");
             request.setAttribute("videos", new ArrayList<Video>());
+            request.setAttribute("currentPage", page);
+            request.setAttribute("totalPages", 0);
+            request.setAttribute("totalVideos", 0);
         } else {
-            request.setAttribute("videos", videos);
+            int totalPages = (int) Math.ceil((double) searchResponse.total / PAGE_SIZE);
+            request.setAttribute("videos", searchResponse.items);
+            request.setAttribute("currentPage", searchResponse.page);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("totalVideos", searchResponse.total);
         }
-
-        // searchResults.jsp uses the same videoTable.jsp fragment, which reads
-        // currentPage; for search we always pass 0 (no pagination needed)
-        request.setAttribute("currentPage", 0);
-        request.setAttribute("totalPages",  1);
-        request.setAttribute("totalVideos", videos != null ? videos.size() : 0);
 
         echoParams(request, title, author, year, month, day);
         request.getRequestDispatcher("searchResults.jsp").forward(request, response);
     }
 
-    // JSON array parser
+    // JSON parser
 
-    /**
-     * Parses a JSON array of video objects returned by glimpse-rest.
-     * The format is completely predictable so a hand-rolled parser is safe here.
-     */
-    private List<Video> parseJsonArray(String json) {
+    private SearchResponse parseSearchResponse(String json) {
+        SearchResponse response = new SearchResponse();
+        if (json == null) return response;
+        json = json.trim();
+        if (json.isEmpty()) return response;
+
+        response.page = toInt(getField(json, "page"));
+        response.pageSize = toInt(getField(json, "pageSize"));
+        response.total = toInt(getField(json, "total"));
+        response.items = parseItemsArray(getArrayField(json, "items"));
+        return response;
+    }
+
+    private List<Video> parseItemsArray(String json) {
         List<Video> list = new ArrayList<>();
         if (json == null) return list;
         json = json.trim();
@@ -167,16 +184,16 @@ public class SearchServlet extends HttpServlet {
             String desc       = getField(obj, "description");
             String format     = getField(obj, "format");
             String fileSource = getField(obj, "fileSource");
+            String externalUrl = getField(obj, "externalUrl");
 
             if (dateStr == null || durStr == null) return null;
             LocalDate date = LocalDate.parse(dateStr);
             LocalTime dur  = LocalTime.parse(durStr);
 
-            // filePath is intentionally not returned by glimpse-rest
-            // (internal paths should not be exposed). PlayVideoServlet
-            // fetches it from glimpse's own DB when needed.
             return new Video(id, title, author, date, dur, views,
-                             desc, format, "", null, fileSource);
+                             desc, format,
+                             externalUrl != null ? externalUrl : "",
+                             null, fileSource);
         } catch (Exception e) {
             return null;
         }
@@ -233,6 +250,26 @@ public class SearchServlet extends HttpServlet {
         return obj.substring(idx, end).trim();
     }
 
+    private String getArrayField(String obj, String key) {
+        String search = "\"" + key + "\":";
+        int idx = obj.indexOf(search);
+        if (idx < 0) return null;
+        idx += search.length();
+        while (idx < obj.length() && Character.isWhitespace(obj.charAt(idx))) idx++;
+        if (idx >= obj.length() || obj.charAt(idx) != '[') return null;
+
+        int depth = 0;
+        for (int i = idx; i < obj.length(); i++) {
+            char c = obj.charAt(i);
+            if (c == '[') depth++;
+            else if (c == ']') {
+                depth--;
+                if (depth == 0) return obj.substring(idx, i + 1);
+            }
+        }
+        return null;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void appendEncoded(StringBuilder sb, String key, String value) {
@@ -248,6 +285,7 @@ public class SearchServlet extends HttpServlet {
         req.setAttribute("q_year",   year   != null ? year   : "");
         req.setAttribute("q_month",  month  != null ? month  : "");
         req.setAttribute("q_day",    day    != null ? day    : "");
+        req.setAttribute("searchBaseUrl", buildSearchBaseUrl(title, author, year, month, day));
     }
 
     private String emptyToNull(String s) {
@@ -258,5 +296,31 @@ public class SearchServlet extends HttpServlet {
         if (s == null) return 0;
         try { return Integer.parseInt(s.trim()); }
         catch (NumberFormatException e) { return 0; }
+    }
+
+    private int parsePage(String value) {
+        try {
+            return Math.max(0, Integer.parseInt(value));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private String buildSearchBaseUrl(String title, String author,
+                                      String year, String month, String day) {
+        StringBuilder sb = new StringBuilder("SearchServlet?1=1");
+        appendEncoded(sb, "title", title);
+        appendEncoded(sb, "author", author);
+        appendEncoded(sb, "year", year);
+        appendEncoded(sb, "month", month);
+        appendEncoded(sb, "day", day);
+        return sb.toString();
+    }
+
+    private static class SearchResponse {
+        private List<Video> items = new ArrayList<>();
+        private int total;
+        private int page;
+        private int pageSize;
     }
 }
