@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import model.DBManager;
+import security.Csrf;
 
 @WebServlet(name = "DeleteVideoServlet", urlPatterns = {"/DeleteVideoServlet"})
 public class DeleteVideoServlet extends HttpServlet {
@@ -21,6 +22,11 @@ public class DeleteVideoServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedUser") == null) {
             response.sendRedirect("login.jsp");
+            return;
+        }
+        if (!Csrf.isValid(request, session)) {
+            session.setAttribute("error", "Security token missing or expired.");
+            response.sendRedirect("ListVideosServlet");
             return;
         }
 

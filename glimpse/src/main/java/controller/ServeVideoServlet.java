@@ -7,10 +7,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import model.DBManager;
+import model.Video;
 
 /**
  * Serves video files that were uploaded to the local server.
@@ -43,8 +44,21 @@ public class ServeVideoServlet extends HttpServlet {
             return;
         }
 
-        // Validate filename — no path separators, no ".."
-        String filename = request.getParameter("file");
+        int id;
+        try {
+            id = Integer.parseInt(request.getParameter("id"));
+        } catch (NumberFormatException e) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid video id.");
+            return;
+        }
+
+        Video video = new DBManager().getVideoById(id);
+        if (video == null || !"upload".equals(video.getFileSource())) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        String filename = video.getFilePath();
         if (filename == null || filename.isBlank()
                 || filename.contains("/") || filename.contains("\\")
                 || filename.contains("..")) {

@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="java.util.List"%>
 <%@page import="model.Video"%>
+<%@page import="util.ViewUtils"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -34,7 +35,7 @@
 
         <% if (request.getAttribute("error") != null) { %>
             <div class="alert-glimpse-error mb-4">
-                <i class="bi bi-exclamation-circle me-2"></i><%= request.getAttribute("error") %>
+                <i class="bi bi-exclamation-circle me-2"></i><%= ViewUtils.h(request.getAttribute("error")) %>
             </div>
         <% } %>
 

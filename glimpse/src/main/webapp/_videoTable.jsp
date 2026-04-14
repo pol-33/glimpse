@@ -1,3 +1,5 @@
+<%@page import="security.Csrf"%>
+<%@page import="util.ViewUtils"%>
 <%-- ???????????????????????????????????????????????????????????????????????????
      videoTable.jsp  ?  SHARED TABLE FRAGMENT
      ???????????????????????????????????????????????????????????????????????????
@@ -41,13 +43,13 @@
                     <%= v.getId() %>
                 </td>
                 <td style="font-weight:600; color:var(--glimpse-dark);">
-                    <%= v.getTitle() %>
+                    <%= ViewUtils.h(v.getTitle()) %>
                 </td>
                 <td>
                     <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
                                  padding:2px 10px; border-radius:20px;
                                  font-size:0.82rem; font-weight:600;">
-                        <%= v.getAuthor() %>
+                        <%= ViewUtils.h(v.getAuthor()) %>
                     </span>
                 </td>
                 <td style="color:var(--glimpse-muted); font-size:0.88rem;">
@@ -61,22 +63,23 @@
                     <span style="background:#F1F5F9; color:var(--glimpse-muted);
                                  padding:2px 8px; border-radius:4px;
                                  font-size:0.8rem; font-family:monospace;">
-                        <%= v.getFormat() %>
+                        <%= ViewUtils.h(v.getFormat()) %>
                     </span>
                 </td>
                 <td style="font-size:0.88rem; color:var(--glimpse-muted); max-width:180px;">
-                    <%= v.getDescription() != null ? v.getDescription() : "" %>
+                    <%= ViewUtils.h(v.getDescription() != null ? v.getDescription() : "") %>
                 </td>
                 <td>
                     <% if ("url".equals(v.getFileSource())) { %>
-                        <a href="<%= v.getFilePath() %>" target="_blank"
+                        <a href="<%= ViewUtils.attr(ViewUtils.safeExternalUrl(v.getFilePath())) %>"
+                           target="_blank" rel="noopener noreferrer"
                            style="color:var(--glimpse-accent); font-size:0.88rem; font-weight:600;">
                             <i class="bi bi-box-arrow-up-right me-1"></i>Open link
                         </a>
                     <% } else { %>
                         <span style="color:var(--glimpse-muted); font-size:0.85rem;">
                             <i class="bi bi-file-earmark-play me-1"></i>
-                            <%= v.getOriginalFilename() %>
+                            <%= ViewUtils.h(v.getOriginalFilename()) %>
                         </span>
                     <% } %>
                 </td>
@@ -119,6 +122,8 @@
                                   onsubmit="return confirm('Delete this video?');">
                                 <input type="hidden" name="id"   value="<%= v.getId() %>">
                                 <input type="hidden" name="page" value="<%= currentPage %>">
+                                <input type="hidden" name="csrfToken"
+                                       value="<%= ViewUtils.attr(Csrf.ensureToken(session)) %>">
                                 <button type="submit" class="btn-glimpse-danger">
                                     <i class="bi bi-trash me-1"></i>Delete
                                 </button>
@@ -142,6 +147,7 @@
  * On error, falls back gracefully (no change shown).
  */
 function toggleLike(btn) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
     const videoId = btn.dataset.id;
     const isLiked = btn.dataset.liked === "true";
 
@@ -150,7 +156,10 @@ function toggleLike(btn) {
 
     fetch("LikeAjaxServlet", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRF-Token": csrfToken
+        },
         body: "id=" + encodeURIComponent(videoId)
     })
     .then(r => {

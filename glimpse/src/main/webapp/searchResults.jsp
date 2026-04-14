@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="java.util.List"%>
 <%@page import="model.Video"%>
+<%@page import="util.ViewUtils"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -50,34 +51,34 @@
             <% if (!qTitle.isEmpty())  { %>
                 <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
                              padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600;">
-                    Title: <%= qTitle %></span>
+                    Title: <%= ViewUtils.h(qTitle) %></span>
             <% } %>
             <% if (!qAuthor.isEmpty()) { %>
                 <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
                              padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600;">
-                    Author: <%= qAuthor %></span>
+                    Author: <%= ViewUtils.h(qAuthor) %></span>
             <% } %>
             <% if (!qYear.isEmpty())   { %>
                 <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
                              padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600;">
-                    Year: <%= qYear %></span>
+                    Year: <%= ViewUtils.h(qYear) %></span>
             <% } %>
             <% if (!qMonth.isEmpty())  { %>
                 <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
                              padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600;">
-                    Month: <%= qMonth %></span>
+                    Month: <%= ViewUtils.h(qMonth) %></span>
             <% } %>
             <% if (!qDay.isEmpty())    { %>
                 <span style="background:var(--glimpse-light); color:var(--glimpse-primary);
                              padding:2px 10px; border-radius:20px; font-size:0.82rem; font-weight:600;">
-                    Day: <%= qDay %></span>
+                    Day: <%= ViewUtils.h(qDay) %></span>
             <% } %>
         </p>
 
         <%-- REST offline error --%>
         <% if (searchError != null) { %>
             <div class="alert-glimpse-error mb-4">
-                <i class="bi bi-wifi-off me-2"></i><%= searchError %>
+                <i class="bi bi-wifi-off me-2"></i><%= ViewUtils.h(searchError) %>
             </div>
         <% } %>
 

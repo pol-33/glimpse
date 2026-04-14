@@ -1,4 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@page import="security.Csrf"%>
+<%@page import="util.ViewUtils"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,12 +22,14 @@
             <div class="glimpse-card">
                 <% if (request.getAttribute("error") != null) { %>
                     <div class="alert-glimpse-error mb-4">
-                        <i class="bi bi-exclamation-circle me-2"></i><%= request.getAttribute("error") %>
+                        <i class="bi bi-exclamation-circle me-2"></i><%= ViewUtils.h(request.getAttribute("error")) %>
                     </div>
                 <% } %>
 
                 <form action="UserServlet" method="POST">
                     <input type="hidden" name="action" value="register">
+                    <input type="hidden" name="csrfToken"
+                           value="<%= ViewUtils.attr(Csrf.ensureToken(request.getSession())) %>">
 
                     <div class="row">
                         <div class="col-md-6 mb-3">

@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import security.PasswordSecurity;
 
 public class DBManager {
 
@@ -47,19 +48,38 @@ public class DBManager {
             pstmt.setString(2, name);
             pstmt.setString(3, surname);
             pstmt.setString(4, email);
-            pstmt.setString(5, password);
+            pstmt.setString(5, PasswordSecurity.hashPassword(password));
             return pstmt.executeUpdate() > 0;
         } catch (Exception e) { e.printStackTrace(); return false; }
     }
 
     public boolean validateLogin(String username, String password) {
-        String query = "SELECT 1 FROM users WHERE username = ? AND password = ?";
+        String query = "SELECT password FROM users WHERE username = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, username);
-            pstmt.setString(2, password);
-            return pstmt.executeQuery().next();
+            ResultSet rs = pstmt.executeQuery();
+            if (!rs.next()) return false;
+
+            String storedPassword = rs.getString("password");
+            boolean valid = PasswordSecurity.verifyPassword(password, storedPassword);
+
+            // Transparently migrate legacy plaintext rows to a hash on next login.
+            if (valid && PasswordSecurity.isLegacyPlaintext(storedPassword)) {
+                upgradeLegacyPassword(conn, username, password);
+            }
+            return valid;
         } catch (Exception e) { e.printStackTrace(); return false; }
+    }
+
+    private void upgradeLegacyPassword(Connection conn, String username, String password)
+            throws Exception {
+        String query = "UPDATE users SET password = ? WHERE username = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, PasswordSecurity.hashPassword(password));
+            pstmt.setString(2, username);
+            pstmt.executeUpdate();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -114,6 +134,10 @@ public class DBManager {
      * @param loggedUser username of the current user (for user_liked flag)
      * @return the Video with like data populated, or null if not found
      */
+    public Video getVideoById(int id) {
+        return getVideoById(id, "");
+    }
+
     public Video getVideoById(int id, String loggedUser) {
         String query =
             "SELECT v.id, v.title, v.author, v.creation_date, v.duration, v.views, " +

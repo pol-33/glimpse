@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import model.DBManager;
+import security.Csrf;
 
 /**
  * Handles like/unlike via AJAX (fetch API).
@@ -34,6 +35,11 @@ public class LikeAjaxServlet extends HttpServlet {
         if (session == null || session.getAttribute("loggedUser") == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("{\"error\":\"Not logged in\"}");
+            return;
+        }
+        if (!Csrf.isValid(request, session)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.getWriter().write("{\"error\":\"Invalid CSRF token\"}");
             return;
         }
 

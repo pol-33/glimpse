@@ -1,4 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@page import="security.Csrf"%>
+<%@page import="util.ViewUtils"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,18 +21,20 @@
 
             <h1 class="page-title">New Video</h1>
             <p class="page-subtitle">
-                Publishing as <strong><%= session.getAttribute("loggedUser") %></strong>
+                Publishing as <strong><%= ViewUtils.h(session.getAttribute("loggedUser")) %></strong>
             </p>
 
             <div class="glimpse-card">
                 <% if (request.getAttribute("error") != null) { %>
                     <div class="alert-glimpse-error mb-4">
-                        <i class="bi bi-exclamation-circle me-2"></i><%= request.getAttribute("error") %>
+                        <i class="bi bi-exclamation-circle me-2"></i><%= ViewUtils.h(request.getAttribute("error")) %>
                     </div>
                 <% } %>
 
                 <form action="RegisterVideoServlet" method="POST"
                       enctype="multipart/form-data" id="videoForm">
+                    <input type="hidden" name="csrfToken"
+                           value="<%= ViewUtils.attr(Csrf.ensureToken(session)) %>">
 
                     <div class="mb-3">
                         <label class="form-label">Title</label>

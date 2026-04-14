@@ -1,5 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="model.Video"%>
+<%@page import="util.ViewUtils"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -108,7 +109,7 @@
         return;
     }
 
-    String videoSrc = request.getContextPath() + "/ServeVideoServlet?file=" + video.getFilePath();
+    String videoSrc = request.getContextPath() + "/ServeVideoServlet?id=" + video.getId();
 
     // Derive a proper MIME type for the <source> tag
     String fmt = video.getFormat() != null ? video.getFormat().toLowerCase() : "";
@@ -142,8 +143,8 @@
     <div class="player-aspect">
         <video-player id="player">
             <video-skin>
-                <video src="<%= videoSrc %>"
-                       type="<%= mimeType %>"
+                <video src="<%= ViewUtils.attr(videoSrc) %>"
+                       type="<%= ViewUtils.attr(mimeType) %>"
                        playsinline
                        preload="metadata">
                 </video>
@@ -162,13 +163,13 @@
 
     <%-- Video metadata card --%>
     <div class="video-meta">
-        <h1 class="video-title"><%= video.getTitle() %></h1>
+        <h1 class="video-title"><%= ViewUtils.h(video.getTitle()) %></h1>
 
         <div class="meta-row">
             <div class="meta-item">
                 <i class="bi bi-person-circle"></i>
                 <strong style="color:var(--glimpse-text);">
-                    <%= video.getAuthor() %>
+                    <%= ViewUtils.h(video.getAuthor()) %>
                 </strong>
             </div>
             <div class="meta-item">
@@ -181,7 +182,7 @@
             </div>
             <div class="meta-item">
                 <i class="bi bi-file-earmark-play"></i>
-                <%= video.getFormat().toUpperCase() %>
+                <%= ViewUtils.h(video.getFormat().toUpperCase()) %>
             </div>
             <div class="meta-item">
                 <span class="views-badge">
@@ -209,7 +210,7 @@
 
         <% if (video.getDescription() != null && !video.getDescription().isEmpty()) { %>
         <div class="desc-block">
-            <%= video.getDescription() %>
+            <%= ViewUtils.h(video.getDescription()) %>
         </div>
         <% } %>
     </div>
@@ -258,13 +259,17 @@ document.addEventListener("keydown", e => {
 
 /* AJAX Like */
 function toggleLike(btn) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
     const videoId = btn.dataset.id;
 
     btn.disabled = true;
 
     fetch("LikeAjaxServlet", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRF-Token": csrfToken
+        },
         body: "id=" + encodeURIComponent(videoId)
     })
     .then(r => {

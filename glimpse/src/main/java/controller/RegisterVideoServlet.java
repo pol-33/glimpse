@@ -18,9 +18,11 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.UUID;
 import model.DBManager;
 import model.Video;
+import security.Csrf;
 
 @WebServlet(name = "RegisterVideoServlet", urlPatterns = {"/RegisterVideoServlet"})
 @MultipartConfig(
@@ -42,6 +44,11 @@ public class RegisterVideoServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedUser") == null) {
             response.sendRedirect("login.jsp");
+            return;
+        }
+        if (!Csrf.isValid(request, session)) {
+            request.setAttribute("error", "Security token missing or expired. Please try again.");
+            request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
             return;
         }
 
@@ -104,6 +111,11 @@ public class RegisterVideoServlet extends HttpServlet {
                 return;
             }
             filePath = rawUrl.trim();
+            if (!isSafeExternalUrl(filePath)) {
+                request.setAttribute("error", "Only valid http/https URLs are allowed.");
+                request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+                return;
+            }
 
             // For URLs, format comes from the form, validate it is not empty
             if (format == null || format.trim().isEmpty()) {
@@ -112,6 +124,11 @@ public class RegisterVideoServlet extends HttpServlet {
                 return;
             }
             format = format.trim().toLowerCase();
+            if (!format.matches("[a-z0-9]{1,10}")) {
+                request.setAttribute("error", "Invalid format.");
+                request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+                return;
+            }
 
         } else { // "upload"
             Part filePart = request.getPart("fileUpload");
@@ -134,6 +151,12 @@ public class RegisterVideoServlet extends HttpServlet {
                 return;
             }
             format = ext;
+            if (!isAllowedMediaExtension(ext) || !isAllowedMediaContentType(filePart.getContentType())) {
+                request.setAttribute("error",
+                    "Only recognized audio/video uploads are allowed.");
+                request.getRequestDispatcher("registerVideo.jsp").forward(request, response);
+                return;
+            }
 
             String storedName = UUID.randomUUID().toString() + "." + ext;
 
@@ -190,5 +213,20 @@ public class RegisterVideoServlet extends HttpServlet {
         if (ext.isEmpty()) return null;              // trailing dot, e.g. "video."
         if (!ext.matches("[a-z0-9]+")) return null;  // only allow alphanumeric extensions
         return ext;
+    }
+
+    private boolean isSafeExternalUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+        return lower.startsWith("http://") || lower.startsWith("https://");
+    }
+
+    private boolean isAllowedMediaExtension(String ext) {
+        return ext.matches("mp4|webm|ogg|ogv|mov|avi|mkv|mp3|wav|flac");
+    }
+
+    private boolean isAllowedMediaContentType(String contentType) {
+        if (contentType == null) return false;
+        String lower = contentType.toLowerCase(Locale.ROOT);
+        return lower.startsWith("video/") || lower.startsWith("audio/");
     }
 }

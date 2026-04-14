@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import model.DBManager;
+import security.Csrf;
 
 @WebServlet(name = "UserServlet", urlPatterns = {"/UserServlet"})
 public class UserServlet extends HttpServlet {
@@ -18,6 +19,15 @@ public class UserServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
 
         String action = request.getParameter("action");
+
+        HttpSession session = request.getSession(false);
+        if (!Csrf.isValid(request, session)) {
+            request.setAttribute("error", "Security token missing or expired. Please try again.");
+            request.getRequestDispatcher("register".equals(action) ? "registerUser.jsp" : "login.jsp")
+                   .forward(request, response);
+            return;
+        }
+
         DBManager dbManager = new DBManager();
 
         if ("register".equals(action)) {
@@ -77,8 +87,12 @@ public class UserServlet extends HttpServlet {
 
             boolean isValid = dbManager.validateLogin(username.trim(), password);
             if (isValid) {
-                HttpSession session = request.getSession();
-                session.setAttribute("loggedUser", username.trim());
+                if (session != null) {
+                    session.invalidate();
+                }
+                HttpSession newSession = request.getSession(true);
+                newSession.setAttribute("loggedUser", username.trim());
+                Csrf.rotateToken(newSession);
                 response.sendRedirect("ListVideosServlet");
             } else {
                 request.setAttribute("error", "Invalid username or password.");

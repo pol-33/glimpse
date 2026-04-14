@@ -1,4 +1,6 @@
 <%@page import="jakarta.servlet.http.HttpSession"%>
+<%@page import="security.Csrf"%>
+<%@page import="util.ViewUtils"%>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -319,10 +321,12 @@
 </style>
 
 <%
-    HttpSession navSession = request.getSession(false);
+    HttpSession navSession = request.getSession();
     boolean isLoggedIn = navSession != null && navSession.getAttribute("loggedUser") != null;
     String navUser = isLoggedIn ? (String) navSession.getAttribute("loggedUser") : "";
+    String csrfToken = Csrf.ensureToken(navSession);
 %>
+<meta name="csrf-token" content="<%= ViewUtils.attr(csrfToken) %>">
 
 <nav class="glimpse-nav">
     <div class="container d-flex align-items-center justify-content-between">
@@ -332,7 +336,7 @@
         <% if (isLoggedIn) { %>
         <div class="d-flex align-items-center gap-3">
             <span class="nav-username">
-                <i class="bi bi-person-circle me-1"></i><%= navUser %>
+                <i class="bi bi-person-circle me-1"></i><%= ViewUtils.h(navUser) %>
             </span>
             <%-- Search navigates to the search form page, not directly to the servlet --%>
             <a href="search.jsp" class="btn-nav">
