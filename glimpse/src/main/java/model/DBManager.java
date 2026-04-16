@@ -193,8 +193,9 @@ public class DBManager {
      * @param pageSize   number of rows per page
      * @param loggedUser username of the current user (for user_liked flag)
      */
-    public List<Video> getVideosPage(int page, int pageSize, String loggedUser) {
+    public List<Video> getVideosPage(int page, int pageSize, String loggedUser, String sort) {
         List<Video> videos = new ArrayList<>();
+        String orderBy = orderByClause(sort);
 
         // Single JOIN: one DB round-trip instead of three.
         // COUNT(l.username)  → like count per video (NULL rows from LEFT JOIN not counted)
@@ -209,7 +210,7 @@ public class DBManager {
             "LEFT JOIN likes l ON v.id = l.video_id " +
             "GROUP BY v.id, v.title, v.author, v.creation_date, v.duration, v.views, " +
             "         v.description, v.format, v.file_path, v.original_filename, v.file_source " +
-            "ORDER BY v.id DESC " +
+            orderBy +
             "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
         try (Connection conn = getConnection();
@@ -246,6 +247,33 @@ public class DBManager {
             e.printStackTrace();
         }
         return videos;
+    }
+
+    public String normalizeSort(String sort) {
+        if ("date_desc".equals(sort) || "date_asc".equals(sort)
+                || "likes_desc".equals(sort) || "likes_asc".equals(sort)
+                || "views_desc".equals(sort) || "views_asc".equals(sort)) {
+            return sort;
+        }
+        return "date_desc";
+    }
+
+    private String orderByClause(String sort) {
+        switch (normalizeSort(sort)) {
+            case "likes_asc":
+                return "ORDER BY like_count ASC, v.creation_date DESC, v.id DESC ";
+            case "likes_desc":
+                return "ORDER BY like_count DESC, v.creation_date DESC, v.id DESC ";
+            case "views_asc":
+                return "ORDER BY v.views ASC, v.creation_date DESC, v.id DESC ";
+            case "views_desc":
+                return "ORDER BY v.views DESC, v.creation_date DESC, v.id DESC ";
+            case "date_asc":
+                return "ORDER BY v.creation_date ASC, v.id ASC ";
+            case "date_desc":
+            default:
+                return "ORDER BY v.creation_date DESC, v.id DESC ";
+        }
     }
 
     /**

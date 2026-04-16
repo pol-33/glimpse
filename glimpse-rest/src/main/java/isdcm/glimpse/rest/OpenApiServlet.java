@@ -50,7 +50,8 @@ public class OpenApiServlet extends HttpServlet {
                             + param("month", "query", "integer", false, "Creation month") + ","
                             + param("day", "query", "integer", false, "Creation day") + ","
                             + param("page", "query", "integer", false, "Zero-based page number") + ","
-                            + param("pageSize", "query", "integer", false, "Number of items per page")
+                            + param("pageSize", "query", "integer", false, "Number of items per page") + ","
+                            + param("sort", "query", "string", false, "Sort by: likes_desc, likes_asc, views_desc, views_asc, date_desc, date_asc")
                         + "],"
                         + "\"responses\":{\"200\":{\"description\":\"Paginated search results\"}}"
                     + "},"
@@ -68,7 +69,8 @@ public class OpenApiServlet extends HttpServlet {
                                         + "\"month\":{\"type\":\"integer\"},"
                                         + "\"day\":{\"type\":\"integer\"},"
                                         + "\"page\":{\"type\":\"integer\"},"
-                                        + "\"pageSize\":{\"type\":\"integer\"}"
+                                        + "\"pageSize\":{\"type\":\"integer\"},"
+                                        + "\"sort\":{\"type\":\"string\"}"
                                     + "}"
                                 + "}"
                             + "}}"

@@ -59,29 +59,34 @@ public class DBManager {
      */
     public SearchResult searchVideos(String title, String author,
                                      Integer year, Integer month, Integer day,
-                                     int page, int pageSize) {
+                                     int page, int pageSize, String sort) {
         List<VideoInfo> results = new ArrayList<>();
+        String orderBy = orderByClause(sort);
 
-        StringBuilder where = new StringBuilder(" FROM videos WHERE 1=1");
+        StringBuilder where = new StringBuilder(" FROM videos v WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         if (title  != null && !title.trim().isEmpty()) {
-            where.append(" AND LOWER(title)  LIKE LOWER(?)");
+            where.append(" AND LOWER(v.title)  LIKE LOWER(?)");
             params.add("%" + title.trim() + "%");
         }
         if (author != null && !author.trim().isEmpty()) {
-            where.append(" AND LOWER(author) LIKE LOWER(?)");
+            where.append(" AND LOWER(v.author) LIKE LOWER(?)");
             params.add("%" + author.trim() + "%");
         }
-        if (year  != null) { where.append(" AND YEAR(creation_date)  = ?"); params.add(year);  }
-        if (month != null) { where.append(" AND MONTH(creation_date) = ?"); params.add(month); }
-        if (day   != null) { where.append(" AND DAY(creation_date)   = ?"); params.add(day);   }
+        if (year  != null) { where.append(" AND YEAR(v.creation_date)  = ?"); params.add(year);  }
+        if (month != null) { where.append(" AND MONTH(v.creation_date) = ?"); params.add(month); }
+        if (day   != null) { where.append(" AND DAY(v.creation_date)   = ?"); params.add(day);   }
 
         String dataSql =
-            "SELECT id, title, author, creation_date, duration, views, " +
-            "       description, format, file_source, file_path" +
-            where +
-            " ORDER BY id DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+            "SELECT v.id, v.title, v.author, v.creation_date, v.duration, v.views, " +
+            "       v.description, v.format, v.file_source, v.file_path, COUNT(l.username) AS like_count " +
+            "FROM videos v LEFT JOIN likes l ON v.id = l.video_id " +
+            where.toString().replaceFirst(" FROM videos v", "") +
+            " GROUP BY v.id, v.title, v.author, v.creation_date, v.duration, v.views, " +
+            "          v.description, v.format, v.file_source, v.file_path " +
+            orderBy +
+            "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
         String countSql = "SELECT COUNT(*)" + where;
 
@@ -132,6 +137,33 @@ public class DBManager {
             Object p = params.get(i);
             if (p instanceof String) pstmt.setString(i + 1, (String) p);
             else                     pstmt.setInt(i + 1, (Integer) p);
+        }
+    }
+
+    private String normalizeSort(String sort) {
+        if ("date_desc".equals(sort) || "date_asc".equals(sort)
+                || "likes_desc".equals(sort) || "likes_asc".equals(sort)
+                || "views_desc".equals(sort) || "views_asc".equals(sort)) {
+            return sort;
+        }
+        return "date_desc";
+    }
+
+    private String orderByClause(String sort) {
+        switch (normalizeSort(sort)) {
+            case "likes_asc":
+                return "ORDER BY like_count ASC, v.creation_date DESC, v.id DESC ";
+            case "likes_desc":
+                return "ORDER BY like_count DESC, v.creation_date DESC, v.id DESC ";
+            case "views_asc":
+                return "ORDER BY v.views ASC, v.creation_date DESC, v.id DESC ";
+            case "views_desc":
+                return "ORDER BY v.views DESC, v.creation_date DESC, v.id DESC ";
+            case "date_asc":
+                return "ORDER BY v.creation_date ASC, v.id ASC ";
+            case "date_desc":
+            default:
+                return "ORDER BY v.creation_date DESC, v.id DESC ";
         }
     }
 

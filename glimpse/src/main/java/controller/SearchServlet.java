@@ -32,6 +32,7 @@ public class SearchServlet extends HttpServlet {
 
     private static final int TIMEOUT_MS = 5_000;
     private static final int PAGE_SIZE = 20;
+    private static final String DEFAULT_SORT = "date_desc";
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -54,6 +55,7 @@ public class SearchServlet extends HttpServlet {
         String month  = emptyToNull(request.getParameter("month"));
         String day    = emptyToNull(request.getParameter("day"));
         int page = parsePage(request.getParameter("page"));
+        String sort = normalizeSort(request.getParameter("sort"));
 
         // Require at least one criterion
         if (title == null && author == null && year == null && month == null && day == null) {
@@ -76,6 +78,7 @@ public class SearchServlet extends HttpServlet {
         appendEncoded(urlSb, "day",    day);
         appendEncoded(urlSb, "page",   String.valueOf(page));
         appendEncoded(urlSb, "pageSize", String.valueOf(PAGE_SIZE));
+        appendEncoded(urlSb, "sort", sort);
 
         // Call REST service via HttpURLConnection
         SearchResponse searchResponse = null;
@@ -122,6 +125,7 @@ public class SearchServlet extends HttpServlet {
             request.setAttribute("totalVideos", searchResponse.total);
         }
 
+        request.setAttribute("currentSort", sort);
         echoParams(request, title, author, year, month, day);
         request.getRequestDispatcher("searchResults.jsp").forward(request, response);
     }
@@ -285,7 +289,10 @@ public class SearchServlet extends HttpServlet {
         req.setAttribute("q_year",   year   != null ? year   : "");
         req.setAttribute("q_month",  month  != null ? month  : "");
         req.setAttribute("q_day",    day    != null ? day    : "");
-        req.setAttribute("searchBaseUrl", buildSearchBaseUrl(title, author, year, month, day));
+        req.setAttribute("searchBaseUrl", buildSearchBaseUrl(
+            title, author, year, month, day,
+            (String) req.getAttribute("currentSort")
+        ));
     }
 
     private String emptyToNull(String s) {
@@ -307,14 +314,25 @@ public class SearchServlet extends HttpServlet {
     }
 
     private String buildSearchBaseUrl(String title, String author,
-                                      String year, String month, String day) {
+                                      String year, String month, String day,
+                                      String sort) {
         StringBuilder sb = new StringBuilder("SearchServlet?1=1");
         appendEncoded(sb, "title", title);
         appendEncoded(sb, "author", author);
         appendEncoded(sb, "year", year);
         appendEncoded(sb, "month", month);
         appendEncoded(sb, "day", day);
+        appendEncoded(sb, "sort", normalizeSort(sort));
         return sb.toString();
+    }
+
+    private String normalizeSort(String sort) {
+        if ("date_desc".equals(sort) || "date_asc".equals(sort)
+                || "likes_desc".equals(sort) || "likes_asc".equals(sort)
+                || "views_desc".equals(sort) || "views_asc".equals(sort)) {
+            return sort;
+        }
+        return DEFAULT_SORT;
     }
 
     private static class SearchResponse {

@@ -20,6 +20,8 @@
         int currentPage     = (Integer) request.getAttribute("currentPage");
         int totalPages      = (Integer) request.getAttribute("totalPages");
         int totalVideos     = (Integer) request.getAttribute("totalVideos");
+        String currentSort  = (String) request.getAttribute("currentSort");
+        String listBaseUrl  = (String) request.getAttribute("listBaseUrl");
     %>
 
     <div class="container py-5">
@@ -31,6 +33,17 @@
                     Browse everything published on Glimpse.
                 </p>
             </div>
+            <form action="ListVideosServlet" method="GET" style="min-width:220px;">
+                <label class="form-label">Order by</label>
+                <select name="sort" class="form-control" onchange="this.form.submit()">
+                    <option value="likes_desc" <%= "likes_desc".equals(currentSort) ? "selected" : "" %>>More likes</option>
+                    <option value="likes_asc" <%= "likes_asc".equals(currentSort) ? "selected" : "" %>>Less likes</option>
+                    <option value="views_desc" <%= "views_desc".equals(currentSort) ? "selected" : "" %>>More views</option>
+                    <option value="views_asc" <%= "views_asc".equals(currentSort) ? "selected" : "" %>>Less views</option>
+                    <option value="date_desc" <%= "date_desc".equals(currentSort) ? "selected" : "" %>>More recent</option>
+                    <option value="date_asc" <%= "date_asc".equals(currentSort) ? "selected" : "" %>>Older</option>
+                </select>
+            </form>
         </div>
 
         <% if (request.getAttribute("error") != null) { %>
@@ -53,13 +66,13 @@
                 </span>
                 <div class="d-flex gap-2">
                     <% if (currentPage > 0) { %>
-                        <a href="ListVideosServlet?page=<%= currentPage - 1 %>"
+                        <a href="<%= ViewUtils.attr(listBaseUrl + "&page=" + (currentPage - 1)) %>"
                            class="btn-glimpse-outline" style="padding:0.4rem 1rem;">
                             <i class="bi bi-chevron-left me-1"></i>Previous
                         </a>
                     <% } %>
                     <% if (currentPage < totalPages - 1) { %>
-                        <a href="ListVideosServlet?page=<%= currentPage + 1 %>"
+                        <a href="<%= ViewUtils.attr(listBaseUrl + "&page=" + (currentPage + 1)) %>"
                            class="btn-glimpse" style="padding:0.4rem 1rem;">
                             Next<i class="bi bi-chevron-right ms-1"></i>
                         </a>

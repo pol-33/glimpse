@@ -23,6 +23,7 @@
         int totalPages      = (Integer) request.getAttribute("totalPages");
         int totalVideos     = (Integer) request.getAttribute("totalVideos");
         String searchBaseUrl = (String) request.getAttribute("searchBaseUrl");
+        String currentSort  = (String) request.getAttribute("currentSort");
 
         String searchError  = (String) request.getAttribute("searchError");
 
@@ -48,6 +49,25 @@
         </a>
 
         <h1 class="page-title">Search Results</h1>
+
+        <div class="d-flex justify-content-end mb-3">
+            <form action="SearchServlet" method="GET" style="min-width:220px;">
+                <input type="hidden" name="title" value="<%= ViewUtils.attr(qTitle) %>">
+                <input type="hidden" name="author" value="<%= ViewUtils.attr(qAuthor) %>">
+                <input type="hidden" name="year" value="<%= ViewUtils.attr(qYear) %>">
+                <input type="hidden" name="month" value="<%= ViewUtils.attr(qMonth) %>">
+                <input type="hidden" name="day" value="<%= ViewUtils.attr(qDay) %>">
+                <label class="form-label">Order by</label>
+                <select name="sort" class="form-control" onchange="this.form.submit()">
+                    <option value="likes_desc" <%= "likes_desc".equals(currentSort) ? "selected" : "" %>>More likes</option>
+                    <option value="likes_asc" <%= "likes_asc".equals(currentSort) ? "selected" : "" %>>Less likes</option>
+                    <option value="views_desc" <%= "views_desc".equals(currentSort) ? "selected" : "" %>>More views</option>
+                    <option value="views_asc" <%= "views_asc".equals(currentSort) ? "selected" : "" %>>Less views</option>
+                    <option value="date_desc" <%= "date_desc".equals(currentSort) ? "selected" : "" %>>More recent</option>
+                    <option value="date_asc" <%= "date_asc".equals(currentSort) ? "selected" : "" %>>Older</option>
+                </select>
+            </form>
+        </div>
 
         <%-- Active filter pills --%>
         <p class="page-subtitle" style="margin-bottom:1.5rem; display:flex; flex-wrap:wrap; gap:6px;">

@@ -12,6 +12,12 @@
             response.sendRedirect("login.jsp");
             return;
         }
+        String sort = request.getParameter("sort");
+        if (sort == null || (!sort.equals("date_desc") && !sort.equals("date_asc")
+                && !sort.equals("likes_desc") && !sort.equals("likes_asc")
+                && !sort.equals("views_desc") && !sort.equals("views_asc"))) {
+            sort = "date_desc";
+        }
     %>
 
     <div class="container py-5">
@@ -60,6 +66,18 @@
                                        placeholder="Day" min="1" max="31">
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Order by</label>
+                        <select name="sort" class="form-control">
+                            <option value="likes_desc" <%= "likes_desc".equals(sort) ? "selected" : "" %>>More likes</option>
+                            <option value="likes_asc" <%= "likes_asc".equals(sort) ? "selected" : "" %>>Less likes</option>
+                            <option value="views_desc" <%= "views_desc".equals(sort) ? "selected" : "" %>>More views</option>
+                            <option value="views_asc" <%= "views_asc".equals(sort) ? "selected" : "" %>>Less views</option>
+                            <option value="date_desc" <%= "date_desc".equals(sort) ? "selected" : "" %>>More recent</option>
+                            <option value="date_asc" <%= "date_asc".equals(sort) ? "selected" : "" %>>Older</option>
+                        </select>
                     </div>
 
                     <button type="submit" class="btn-glimpse w-100">

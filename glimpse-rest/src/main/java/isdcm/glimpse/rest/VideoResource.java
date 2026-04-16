@@ -72,9 +72,10 @@ public class VideoResource {
             @QueryParam("month")  String month,
             @QueryParam("day")    String day,
             @QueryParam("page")   String page,
-            @QueryParam("pageSize") String pageSize) {
+            @QueryParam("pageSize") String pageSize,
+            @QueryParam("sort") String sort) {
 
-        return doSearch(title, author, year, month, day, page, pageSize);
+        return doSearch(title, author, year, month, day, page, pageSize, sort);
     }
 
     // POST /videos/search
@@ -96,16 +97,17 @@ public class VideoResource {
             @FormParam("month")  String month,
             @FormParam("day")    String day,
             @FormParam("page")   String page,
-            @FormParam("pageSize") String pageSize) {
+            @FormParam("pageSize") String pageSize,
+            @FormParam("sort") String sort) {
 
-        return doSearch(title, author, year, month, day, page, pageSize);
+        return doSearch(title, author, year, month, day, page, pageSize, sort);
     }
 
     // Shared search logic
 
     private Response doSearch(String title, String author,
                               String year, String month, String day,
-                              String page, String pageSize) {
+                              String page, String pageSize, String sort) {
         Integer y = toInt(year);
         Integer m = toInt(month);
         Integer d = toInt(day);
@@ -114,7 +116,7 @@ public class VideoResource {
 
         DBManager db = new DBManager();
         DBManager.SearchResult result =
-            db.searchVideos(title, author, y, m, d, safePage, safePageSize);
+            db.searchVideos(title, author, y, m, d, safePage, safePageSize, sort);
 
         return Response.ok(toJson(result)).build();
     }

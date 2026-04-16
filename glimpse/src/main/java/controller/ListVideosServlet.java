@@ -43,6 +43,7 @@ public class ListVideosServlet extends HttpServlet {
         } catch (NumberFormatException ignored) {}
 
         DBManager dbManager = new DBManager();
+        String sort = dbManager.normalizeSort(request.getParameter("sort"));
 
         int totalVideos = dbManager.getVideoCount();
         int totalPages  = (int) Math.ceil((double) totalVideos / PAGE_SIZE);
@@ -50,12 +51,14 @@ public class ListVideosServlet extends HttpServlet {
         // Clamp page to valid range
         page = Math.min(page, Math.max(0, totalPages - 1));
 
-        List<Video> videos = dbManager.getVideosPage(page, PAGE_SIZE, loggedUser);
+        List<Video> videos = dbManager.getVideosPage(page, PAGE_SIZE, loggedUser, sort);
 
         request.setAttribute("videos",      videos);
         request.setAttribute("currentPage", page);
         request.setAttribute("totalPages",  totalPages);
         request.setAttribute("totalVideos", totalVideos);
+        request.setAttribute("currentSort", sort);
+        request.setAttribute("listBaseUrl", "ListVideosServlet?sort=" + sort);
 
         request.getRequestDispatcher("listVideos.jsp").forward(request, response);
     }
