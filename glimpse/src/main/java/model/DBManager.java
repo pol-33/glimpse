@@ -1,5 +1,9 @@
 package model;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -15,6 +19,9 @@ public class DBManager {
     private static final String URL  = "jdbc:derby://localhost:1527/pr2";
     private static final String USER = "pr2";
     private static final String PASS = "pr2";
+    private static final Path UPLOAD_DIR =
+        Paths.get(System.getProperty("user.home") + File.separator + "glimpse-uploads")
+             .toAbsolutePath().normalize();
 
     // -------------------------------------------------------------------------
     // CONNECTION
@@ -117,13 +124,51 @@ public class DBManager {
     }
 
     public boolean deleteVideo(int id, String author) {
-        String query = "DELETE FROM videos WHERE id = ? AND author = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setInt(1, id);
-            pstmt.setString(2, author);
-            return pstmt.executeUpdate() > 0;
+        String selectQuery =
+            "SELECT file_path, file_source FROM videos WHERE id = ? AND author = ?";
+        String deleteQuery = "DELETE FROM videos WHERE id = ? AND author = ?";
+
+        try (Connection conn = getConnection()) {
+            String filePath = null;
+            String fileSource = null;
+
+            try (PreparedStatement select = conn.prepareStatement(selectQuery)) {
+                select.setInt(1, id);
+                select.setString(2, author);
+
+                ResultSet rs = select.executeQuery();
+                if (!rs.next()) return false;
+
+                filePath = rs.getString("file_path");
+                fileSource = rs.getString("file_source");
+            }
+
+            try (PreparedStatement delete = conn.prepareStatement(deleteQuery)) {
+                delete.setInt(1, id);
+                delete.setString(2, author);
+                if (delete.executeUpdate() <= 0) return false;
+            }
+
+            if ("upload".equals(fileSource)) {
+                deleteUploadedFile(filePath);
+            }
+            return true;
         } catch (Exception e) { e.printStackTrace(); return false; }
+    }
+
+    private void deleteUploadedFile(String storedName) {
+        if (storedName == null || storedName.trim().isEmpty()) return;
+
+        Path candidate = UPLOAD_DIR.resolve(storedName).normalize();
+        if (!candidate.startsWith(UPLOAD_DIR)) {
+            throw new IllegalArgumentException("Refusing to delete file outside upload directory.");
+        }
+
+        try {
+            Files.deleteIfExists(candidate);
+        } catch (Exception e) {
+            throw new RuntimeException("Could not delete uploaded video file: " + storedName, e);
+        }
     }
 
     /**
