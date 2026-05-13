@@ -28,11 +28,16 @@ public class ListVideosServlet extends HttpServlet {
 
         String loggedUser = (String) session.getAttribute("loggedUser");
 
-        // Consume flash message from session (set by DeleteVideoServlet on error)
+        // Consume flash messages from session
         String error = (String) session.getAttribute("error");
         if (error != null) {
             request.setAttribute("error", error);
-            session.removeAttribute("error"); // remove immediately so it shows only once
+            session.removeAttribute("error");
+        }
+        String success = (String) session.getAttribute("success");
+        if (success != null) {
+            request.setAttribute("success", success);
+            session.removeAttribute("success");
         }
 
         // Parse page parameter — default to 0

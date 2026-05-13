@@ -74,6 +74,11 @@ public class PlayVideoServlet extends HttpServlet {
                 "Only locally uploaded videos can be played here.");
             return;
         }
+        if (video.getFilePath() != null && video.getFilePath().endsWith(".enc")) {
+            session.setAttribute("error", "This video is encrypted and cannot be played. Decrypt it first.");
+            response.sendRedirect("ListVideosServlet");
+            return;
+        }
 
         // Call REST PUT to increment views
         // Uses java.net.HttpURLConnection (java.base, no extra modules needed).

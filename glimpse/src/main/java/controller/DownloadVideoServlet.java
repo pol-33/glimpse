@@ -52,6 +52,10 @@ public class DownloadVideoServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid filename.");
             return;
         }
+        if (storedFilename.endsWith(".enc")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Video is encrypted.");
+            return;
+        }
 
         File file = new File(UPLOAD_DIR, storedFilename);
         if (!file.exists() || !file.isFile()) {

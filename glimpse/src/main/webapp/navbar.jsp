@@ -238,6 +238,16 @@
         font-weight: 500;
     }
     
+    .alert-glimpse-success {
+        background: #F0FDF4;
+        border: 1.5px solid #BBF7D0;
+        color: #15803D;
+        border-radius: 10px;
+        padding: 0.85rem 1.25rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
     .alert-glimpse-info {
         background: var(--glimpse-light);
         border: 1.5px solid #C7D2FE;

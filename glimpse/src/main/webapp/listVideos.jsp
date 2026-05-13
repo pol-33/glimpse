@@ -51,6 +51,11 @@
                 <i class="bi bi-exclamation-circle me-2"></i><%= ViewUtils.h(request.getAttribute("error")) %>
             </div>
         <% } %>
+        <% if (request.getAttribute("success") != null) { %>
+            <div class="alert-glimpse-success mb-4">
+                <i class="bi bi-check-circle me-2"></i><%= ViewUtils.h(request.getAttribute("success")) %>
+            </div>
+        <% } %>
 
         <% if (videos != null && !videos.isEmpty()) { %>
 

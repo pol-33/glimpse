@@ -36,7 +36,8 @@
         <tbody>
         <%
             for (Video v : videos) {
-                boolean canPlay = "upload".equals(v.getFileSource());
+                boolean canPlay = "upload".equals(v.getFileSource())
+                              && (v.getFilePath() == null || !v.getFilePath().endsWith(".enc"));
         %>
             <tr>
                 <td style="color:var(--glimpse-muted); font-size:0.8rem;">
