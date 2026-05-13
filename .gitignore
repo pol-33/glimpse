@@ -30,3 +30,5 @@ derby.log
 # IDE temporary files
 *.swp
 *.swo
+
+docs/

@@ -1,11 +1,15 @@
 package isdcm.glimpse.rest;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 /**
  * Data-access layer for the glimpse-rest service.
@@ -19,6 +23,57 @@ public class DBManager {
         return DriverManager.getConnection(
             "jdbc:derby://localhost:1527/pr2", "pr2", "pr2"
         );
+    }
+
+    // Login validation
+
+    /**
+     * Returns true if the username exists and the password matches the stored PBKDF2 hash.
+     */
+    public boolean validateLogin(String username, String password) {
+        String sql = "SELECT password FROM users WHERE username = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            if (!rs.next()) return false;
+            return verifyPassword(password, rs.getString("password"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static boolean verifyPassword(String password, String stored) {
+        if (password == null || stored == null) return false;
+        if (!stored.startsWith("pbkdf2$")) {
+            byte[] a = password.getBytes(StandardCharsets.UTF_8);
+            byte[] b = stored.getBytes(StandardCharsets.UTF_8);
+            return constantTimeEquals(a, b);
+        }
+        try {
+            String[] parts = stored.split("\\$");
+            if (parts.length != 4) return false;
+            int iterations = Integer.parseInt(parts[1]);
+            byte[] salt     = Base64.getDecoder().decode(parts[2]);
+            byte[] expected = Base64.getDecoder().decode(parts[3]);
+            PBEKeySpec spec = new PBEKeySpec(
+                password.toCharArray(), salt, iterations, expected.length * 8);
+            byte[] actual = SecretKeyFactory
+                .getInstance("PBKDF2WithHmacSHA256")
+                .generateSecret(spec)
+                .getEncoded();
+            return constantTimeEquals(actual, expected);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean constantTimeEquals(byte[] a, byte[] b) {
+        if (a.length != b.length) return false;
+        int diff = 0;
+        for (int i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+        return diff == 0;
     }
 
     // Increment view counter

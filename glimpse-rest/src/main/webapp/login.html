@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glimpse REST — JWT Login</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f2ff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3rem 1rem;
+            color: #1e1b4b;
+        }
+
+        header {
+            width: 100%;
+            max-width: 520px;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin: 0 0 0.25rem;
+        }
+
+        header h1 span { color: #6366f1; }
+
+        header p {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .card {
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(67,56,202,.08);
+            padding: 2.25rem 2.5rem;
+            width: 100%;
+            max-width: 520px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #64748b;
+            margin-bottom: 0.3rem;
+        }
+
+        input[type=text], input[type=password] {
+            width: 100%;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.65rem 1rem;
+            font-size: 0.95rem;
+            font-family: inherit;
+            margin-bottom: 1.1rem;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        input[type=text]:focus, input[type=password]:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            background: #4338ca;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        button:hover { background: #6366f1; }
+
+        button:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+        #result { margin-top: 1.75rem; display: none; }
+
+        #result h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin: 0 0 0.5rem;
+            color: #1e1b4b;
+        }
+
+        #token-box {
+            width: 100%;
+            min-height: 90px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.78rem;
+            background: #f8f9ff;
+            border: 1.5px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 0.75rem;
+            resize: vertical;
+            color: #312e81;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            width: auto;
+            background: transparent;
+            color: #4338ca;
+            border: 1.5px solid #4338ca;
+            padding: 0.4rem 1rem;
+            font-size: 0.83rem;
+            margin-top: 0.5rem;
+        }
+
+        .copy-btn:hover { background: #eef2ff; }
+
+        .hint {
+            margin-top: 0.6rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .hint a { color: #4338ca; }
+
+        .error-box {
+            background: #fef2f2;
+            border: 1.5px solid #fecaca;
+            color: #dc2626;
+            border-radius: 8px;
+            padding: 0.7rem 1rem;
+            font-size: 0.88rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        nav-links {
+            display: block;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        nav-links a { color: #4338ca; margin: 0 0.4rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Glimpse<span>.</span> REST</h1>
+    <p>JSON Web Token — login demo</p>
+</header>
+
+<div class="card">
+    <form id="login-form">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+        <button type="submit" id="submit-btn">Get JWT</button>
+    </form>
+
+    <div class="error-box" id="error-box"></div>
+
+    <div id="result">
+        <h2>JWT issued</h2>
+        <textarea id="token-box" readonly></textarea>
+        <button class="copy-btn" onclick="copyToken()">Copy to clipboard</button>
+        <p class="hint">
+            Paste the token above at
+            <a href="https://jwt.io/" target="_blank" rel="noopener">jwt.io</a>
+            to verify the signature and inspect the payload.
+            The secret key is <code>glimpse-isdcm-jwt-secret-key-do-not-use-in-production-2026-fib-upc</code>.
+        </p>
+    </div>
+</div>
+
+<nav-links>
+    <a href="index.html">← API home</a>
+    <a href="swagger.html">Swagger UI</a>
+</nav-links>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        const btn      = document.getElementById('submit-btn');
+        const errorBox = document.getElementById('error-box');
+        const result   = document.getElementById('result');
+
+        errorBox.style.display = 'none';
+        result.style.display   = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+
+        try {
+            const res = await fetch('resources/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'username=' + encodeURIComponent(username)
+                    + '&password=' + encodeURIComponent(password)
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                errorBox.textContent = data.error || 'Login failed (' + res.status + ')';
+                errorBox.style.display = 'block';
+                return;
+            }
+
+            document.getElementById('token-box').value = data.JWT;
+            result.style.display = 'block';
+
+        } catch (err) {
+            errorBox.textContent = 'Network error — is glimpse-rest running?';
+            errorBox.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Get JWT';
+        }
+    });
+
+    function copyToken() {
+        const box = document.getElementById('token-box');
+        box.select();
+        navigator.clipboard.writeText(box.value).catch(() => {
+            document.execCommand('copy');
+        });
+    }
+</script>
+</body>
+</html>
