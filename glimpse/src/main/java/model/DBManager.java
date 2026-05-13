@@ -368,6 +368,16 @@ public class DBManager {
         return 0;
     }
 
+    public boolean updateFilePath(int id, String newFilePath) {
+        String query = "UPDATE videos SET file_path = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, newFilePath);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (Exception e) { e.printStackTrace(); return false; }
+    }
+
     // -------------------------------------------------------------------------
     // LIKE METHODS
     // -------------------------------------------------------------------------

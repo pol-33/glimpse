@@ -121,6 +121,24 @@
                             </span>
                         </button>
 
+                        <%-- Encrypt / Decrypt (own uploaded files only) --%>
+                        <% if (loggedUser.equals(v.getAuthor()) && "upload".equals(v.getFileSource())) {
+                               boolean isEncrypted = v.getFilePath() != null && v.getFilePath().endsWith(".enc");
+                               String cryptoAction = isEncrypted ? "decrypt" : "encrypt";
+                               String cryptoIcon   = isEncrypted ? "bi-unlock" : "bi-lock";
+                               String cryptoTip    = isEncrypted ? "Decrypt" : "Encrypt";
+                        %>
+                            <form action="CryptoVideoServlet" method="POST" style="display:inline;">
+                                <input type="hidden" name="videoId" value="<%= v.getId() %>">
+                                <input type="hidden" name="action"  value="<%= cryptoAction %>">
+                                <input type="hidden" name="csrfToken"
+                                       value="<%= ViewUtils.attr(Csrf.ensureToken(session)) %>">
+                                <button type="submit" class="btn-glimpse-outline" title="<%= cryptoTip %>">
+                                    <i class="bi <%= cryptoIcon %>"></i>
+                                </button>
+                            </form>
+                        <% } %>
+
                         <%-- Delete (own videos only) --%>
                         <% if (loggedUser.equals(v.getAuthor())) { %>
                             <form action="DeleteVideoServlet" method="POST"
