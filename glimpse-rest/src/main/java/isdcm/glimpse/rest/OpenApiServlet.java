@@ -1,10 +1,30 @@
 package isdcm.glimpse.rest;
 
+import io.swagger.v3.core.util.Json;
+import io.swagger.v3.jaxrs2.Reader;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.servers.Server;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.ApplicationPath;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.core.Application;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @WebServlet(name = "OpenApiServlet", urlPatterns = {"/openapi.json"})
 public class OpenApiServlet extends HttpServlet {
@@ -15,86 +35,126 @@ public class OpenApiServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        String serverUrl = request.getScheme() + "://" + request.getServerName()
-            + ":" + request.getServerPort() + request.getContextPath();
+        Set<Class<?>> applicationClasses = findApplicationClasses();
+        String applicationPath = findApplicationPath(applicationClasses);
+        Set<Class<?>> resourceClasses = findResourceClasses(applicationClasses);
 
-        String json = "{"
-            + "\"openapi\":\"3.0.3\","
-            + "\"info\":{"
-                + "\"title\":\"Glimpse REST API\","
-                + "\"version\":\"1.0.0\","
-                + "\"description\":\"Search videos and update view counters for the Glimpse project.\""
-            + "},"
-            + "\"servers\":[{\"url\":\"" + escape(serverUrl) + "\"}],"
-            + "\"paths\":{"
-                + "\"/resources/videos/{id}/views\":{"
-                    + "\"put\":{"
-                        + "\"summary\":\"Increment the view counter of a video\","
-                        + "\"parameters\":[{"
-                            + "\"name\":\"id\",\"in\":\"path\",\"required\":true,"
-                            + "\"schema\":{\"type\":\"integer\"}"
-                        + "}],"
-                        + "\"responses\":{"
-                            + "\"200\":{\"description\":\"Updated view count\"},"
-                            + "\"404\":{\"description\":\"Video not found\"}"
-                        + "}"
-                    + "}"
-                + "},"
-                + "\"/resources/videos/search\":{"
-                    + "\"get\":{"
-                        + "\"summary\":\"Search videos with pagination\","
-                        + "\"parameters\":["
-                            + param("title", "query", "string", false, "Substring match on title") + ","
-                            + param("author", "query", "string", false, "Substring match on author") + ","
-                            + param("year", "query", "integer", false, "Creation year") + ","
-                            + param("month", "query", "integer", false, "Creation month") + ","
-                            + param("day", "query", "integer", false, "Creation day") + ","
-                            + param("page", "query", "integer", false, "Zero-based page number") + ","
-                            + param("pageSize", "query", "integer", false, "Number of items per page") + ","
-                            + param("sort", "query", "string", false, "Sort by: likes_desc, likes_asc, views_desc, views_asc, date_desc, date_asc")
-                        + "],"
-                        + "\"responses\":{\"200\":{\"description\":\"Paginated search results\"}}"
-                    + "},"
-                    + "\"post\":{"
-                        + "\"summary\":\"Search videos with form parameters\","
-                        + "\"requestBody\":{"
-                            + "\"required\":false,"
-                            + "\"content\":{\"application/x-www-form-urlencoded\":{"
-                                + "\"schema\":{"
-                                    + "\"type\":\"object\","
-                                    + "\"properties\":{"
-                                        + "\"title\":{\"type\":\"string\"},"
-                                        + "\"author\":{\"type\":\"string\"},"
-                                        + "\"year\":{\"type\":\"integer\"},"
-                                        + "\"month\":{\"type\":\"integer\"},"
-                                        + "\"day\":{\"type\":\"integer\"},"
-                                        + "\"page\":{\"type\":\"integer\"},"
-                                        + "\"pageSize\":{\"type\":\"integer\"},"
-                                        + "\"sort\":{\"type\":\"string\"}"
-                                    + "}"
-                                + "}"
-                            + "}}"
-                        + "},"
-                        + "\"responses\":{\"200\":{\"description\":\"Paginated search results\"}}"
-                    + "}"
-                + "}"
-            + "}"
-        + "}";
+        OpenAPI openApi = new OpenAPI()
+            .info(new Info()
+                .title("Glimpse REST API")
+                .version("1.0.0")
+                .description("Automatically generated from the deployed JAX-RS resources."))
+            .addServersItem(new Server().url(serverUrl(request, applicationPath)));
 
-        response.getWriter().write(json);
+        OpenAPI generatedOpenApi = new Reader(openApi).read(resourceClasses);
+        Json.pretty().writeValue(response.getWriter(), generatedOpenApi);
     }
 
-    private String param(String name, String in, String type, boolean required, String description) {
-        return "{"
-            + "\"name\":\"" + escape(name) + "\","
-            + "\"in\":\"" + escape(in) + "\","
-            + "\"required\":" + required + ","
-            + "\"description\":\"" + escape(description) + "\","
-            + "\"schema\":{\"type\":\"" + escape(type) + "\"}"
-        + "}";
+    private Set<Class<?>> findResourceClasses(Set<Class<?>> applicationClasses) {
+        return applicationClasses.stream()
+            .filter(candidate -> candidate.isAnnotationPresent(Path.class))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    private String escape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    private String findApplicationPath(Set<Class<?>> applicationClasses) {
+        return applicationClasses.stream()
+            .filter(Application.class::isAssignableFrom)
+            .filter(candidate -> candidate.isAnnotationPresent(ApplicationPath.class))
+            .sorted(Comparator.comparing(Class::getName))
+            .map(candidate -> candidate.getAnnotation(ApplicationPath.class).value())
+            .findFirst()
+            .orElse("");
+    }
+
+    private Set<Class<?>> findApplicationClasses() {
+        Set<String> classNames = new LinkedHashSet<>();
+        scanServletClasses("/WEB-INF/classes/", classNames);
+
+        if (classNames.isEmpty()) {
+            scanClassLoaderRoot(classNames);
+        }
+
+        List<String> sortedClassNames = new ArrayList<>(classNames);
+        Collections.sort(sortedClassNames);
+
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+
+        Set<Class<?>> classes = new LinkedHashSet<>();
+        for (String className : sortedClassNames) {
+            try {
+                classes.add(Class.forName(className, false, classLoader));
+            } catch (ClassNotFoundException | LinkageError ignored) {
+                // Unloadable classes cannot contribute JAX-RS annotations.
+            }
+        }
+        return classes;
+    }
+
+    private void scanServletClasses(String resourcePath, Set<String> classNames) {
+        Set<String> resources = getServletContext().getResourcePaths(resourcePath);
+        if (resources == null) {
+            return;
+        }
+
+        for (String resource : resources) {
+            if (resource.endsWith("/")) {
+                scanServletClasses(resource, classNames);
+            } else if (resource.endsWith(".class") && !resource.contains("$")) {
+                classNames.add(resource.substring("/WEB-INF/classes/".length(), resource.length() - ".class".length())
+                    .replace('/', '.'));
+            }
+        }
+    }
+
+    private void scanClassLoaderRoot(Set<String> classNames) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+
+        URL root = classLoader.getResource("");
+        if (root == null || !"file".equals(root.getProtocol())) {
+            return;
+        }
+
+        try {
+            java.nio.file.Path rootPath = Paths.get(root.toURI());
+            try (Stream<java.nio.file.Path> files = Files.walk(rootPath)) {
+                files.filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".class"))
+                    .filter(path -> !path.getFileName().toString().contains("$"))
+                    .map(path -> rootPath.relativize(path).toString())
+                    .map(path -> path.substring(0, path.length() - ".class".length()))
+                    .map(path -> path.replace(java.io.File.separatorChar, '.'))
+                    .forEach(classNames::add);
+            }
+        } catch (IOException | URISyntaxException ignored) {
+            // Servlet resource scanning is preferred; this is only a fallback.
+        }
+    }
+
+    private String serverUrl(HttpServletRequest request, String applicationPath) {
+        return request.getScheme() + "://" + request.getServerName()
+            + ":" + request.getServerPort()
+            + request.getContextPath()
+            + normalizedPath(applicationPath);
+    }
+
+    private String normalizedPath(String path) {
+        if (path == null || path.trim().isEmpty()) {
+            return "";
+        }
+
+        String normalized = path.trim();
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized.isEmpty() ? "" : "/" + normalized;
     }
 }
