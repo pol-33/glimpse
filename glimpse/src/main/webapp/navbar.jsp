@@ -372,6 +372,9 @@
             <a href="search.jsp" class="btn-nav">
                 <i class="bi bi-search me-1"></i>Search
             </a>
+            <a href="security.jsp" class="btn-nav">
+                <i class="bi bi-shield-lock me-1"></i>Security
+            </a>
             <a href="registerVideo.jsp" class="btn-nav btn-nav-primary">
                 <i class="bi bi-plus-lg me-1"></i>New Video
             </a>
