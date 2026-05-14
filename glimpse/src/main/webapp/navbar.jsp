@@ -325,8 +325,24 @@
         margin-bottom: 2rem;
     }
 
+    .likes-cell {
+        min-width: 120px;
+    }
+
+    .actions-cell {
+        min-width: 340px;
+    }
+
     .actions-cell form {
         display: inline;
+    }
+
+    .btn-glimpse,
+    .btn-glimpse-outline,
+    .btn-glimpse-danger,
+    .btn-glimpse-like,
+    .btn-glimpse-play {
+        white-space: nowrap;
     }
 </style>
 

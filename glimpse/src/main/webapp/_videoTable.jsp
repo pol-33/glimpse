@@ -29,8 +29,8 @@
                 <th>Format</th>
                 <th>Description</th>
                 <th>File</th>
-                <th>Likes</th>
-                <th>Actions</th>
+                <th class="likes-cell">Likes</th>
+                <th class="actions-cell">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -84,17 +84,31 @@
                         </span>
                     <% } %>
                 </td>
-                <td>
-                    <%-- Like count badge ? updated live by JS --%>
-                    <span class="like-count" id="like-count-<%= v.getId() %>">
-                        <i class="bi bi-heart-fill" style="font-size:0.85rem;"></i>
-                        <span class="like-num"><%= v.getLikeCount() %></span>
-                    </span>
+                <td class="likes-cell">
+                    <%-- Like count badge + Like/Unlike button --%>
+                    <div class="d-flex flex-column align-items-start gap-1">
+                        <span class="like-count" id="like-count-<%= v.getId() %>">
+                            <i class="bi bi-heart-fill" style="font-size:0.85rem;"></i>
+                            <span class="like-num"><%= v.getLikeCount() %></span>
+                        </span>
+                        <button
+                            class="btn-glimpse-like<%= v.isUserLiked() ? " active" : "" %>"
+                            id="like-btn-<%= v.getId() %>"
+                            data-id="<%= v.getId() %>"
+                            data-liked="<%= v.isUserLiked() ? "true" : "false" %>"
+                            onclick="toggleLike(this)">
+                            <i class="bi bi-heart<%= v.isUserLiked() ? "-fill" : "" %> me-1"
+                               id="like-icon-<%= v.getId() %>"></i>
+                            <span id="like-label-<%= v.getId() %>">
+                                <%= v.isUserLiked() ? "Unlike" : "Like" %>
+                            </span>
+                        </button>
+                    </div>
                 </td>
                 <td class="actions-cell">
                     <div class="d-flex gap-2 flex-wrap">
 
-                        <%-- Play: only for uploaded files --%>
+                        <%-- Play: only for uploaded, unencrypted files --%>
                         <% if (canPlay) { %>
                             <a href="PlayVideoServlet?id=<%= v.getId() %>"
                                class="btn-glimpse-play"
@@ -108,34 +122,20 @@
                             </a>
                         <% } %>
 
-                        <%-- Like / Unlike ? AJAX, no page reload --%>
-                        <button
-                            class="btn-glimpse-like<%= v.isUserLiked() ? " active" : "" %>"
-                            id="like-btn-<%= v.getId() %>"
-                            data-id="<%= v.getId() %>"
-                            data-liked="<%= v.isUserLiked() ? "true" : "false" %>"
-                            onclick="toggleLike(this)">
-                            <i class="bi bi-heart<%= v.isUserLiked() ? "-fill" : "" %> me-1"
-                               id="like-icon-<%= v.getId() %>"></i>
-                            <span id="like-label-<%= v.getId() %>">
-                                <%= v.isUserLiked() ? "Unlike" : "Like" %>
-                            </span>
-                        </button>
-
                         <%-- Encrypt / Decrypt (own uploaded files only) --%>
                         <% if (loggedUser.equals(v.getAuthor()) && "upload".equals(v.getFileSource())) {
                                boolean isEncrypted = v.getFilePath() != null && v.getFilePath().endsWith(".enc");
                                String cryptoAction = isEncrypted ? "decrypt" : "encrypt";
                                String cryptoIcon   = isEncrypted ? "bi-unlock" : "bi-lock";
-                               String cryptoTip    = isEncrypted ? "Decrypt" : "Encrypt";
+                               String cryptoLabel  = isEncrypted ? "Decrypt" : "Encrypt";
                         %>
                             <form action="CryptoVideoServlet" method="POST" style="display:inline;">
                                 <input type="hidden" name="videoId" value="<%= v.getId() %>">
                                 <input type="hidden" name="action"  value="<%= cryptoAction %>">
                                 <input type="hidden" name="csrfToken"
                                        value="<%= ViewUtils.attr(Csrf.ensureToken(session)) %>">
-                                <button type="submit" class="btn-glimpse-outline" title="<%= cryptoTip %>">
-                                    <i class="bi <%= cryptoIcon %>"></i>
+                                <button type="submit" class="btn-glimpse-outline">
+                                    <i class="bi <%= cryptoIcon %> me-1"></i><%= cryptoLabel %>
                                 </button>
                             </form>
                         <% } %>
