@@ -20,6 +20,10 @@
 
     * { box-sizing: border-box; }
 
+    .container {
+        max-width: 1520px;
+    }
+
     body {
         font-family: 'DM Sans', sans-serif;
         background: #F8F9FF;
@@ -330,7 +334,7 @@
     }
 
     .actions-cell {
-        min-width: 340px;
+        min-width: 250px;
     }
 
     .actions-cell form {
